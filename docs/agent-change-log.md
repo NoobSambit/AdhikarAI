@@ -1,5 +1,92 @@
 # AdhikarAI Agent Change Log
 
+## 2026-05-10 12:29 IST - Implement Phase 2 Agentic Conversation Layer
+
+- Request: Implement Phase 2 LangGraph-style multi-turn text agent, Redis-backed sessions, PostgreSQL conversation/profile schema, household/profile/document APIs, WebSocket/REST chat, tests, and a simple Next.js developer UI.
+- Agent: Codex.
+- Changed files:
+  - `backend/.env.example`
+  - `backend/pyproject.toml`
+  - `backend/uv.lock`
+  - `backend/app/main.py`
+  - `backend/app/core/config.py`
+  - `backend/app/agent/__init__.py`
+  - `backend/app/agent/completeness.py`
+  - `backend/app/agent/extraction.py`
+  - `backend/app/agent/graph.py`
+  - `backend/app/agent/life_events.py`
+  - `backend/app/agent/question_selection.py`
+  - `backend/app/agent/result_formatter.py`
+  - `backend/app/agent/state.py`
+  - `backend/app/api/routes/agent_sessions.py`
+  - `backend/app/api/routes/document_check.py`
+  - `backend/app/api/routes/households.py`
+  - `backend/app/api/routes/profiles.py`
+  - `backend/app/api/routes/ws_chat.py`
+  - `backend/app/db/migrations/versions/0002_phase_2_agentic_conversation.py`
+  - `backend/app/db/models/__init__.py`
+  - `backend/app/db/models/conversation.py`
+  - `backend/app/db/models/household.py`
+  - `backend/app/db/models/profile.py`
+  - `backend/app/db/models/profile_event.py`
+  - `backend/app/schemas/agent.py`
+  - `backend/app/schemas/document_check.py`
+  - `backend/app/schemas/household.py`
+  - `backend/app/services/documents/__init__.py`
+  - `backend/app/services/documents/document_matcher.py`
+  - `backend/app/services/documents/guidance.py`
+  - `backend/app/services/documents/service.py`
+  - `backend/app/services/households.py`
+  - `backend/app/services/profiles.py`
+  - `backend/app/services/schemes.py`
+  - `backend/app/services/sessions/__init__.py`
+  - `backend/app/services/sessions/redis_store.py`
+  - `backend/app/services/sessions/session_service.py`
+  - `backend/tests/integration/test_phase2_agent_routes.py`
+  - `backend/tests/unit/test_phase2_agent_utilities.py`
+  - `backend/tests/unit/test_phase2_document_check.py`
+  - `backend/tests/unit/test_phase2_session_store.py`
+  - `frontend/package.json`
+  - `frontend/package-lock.json`
+  - `frontend/next-env.d.ts`
+  - `frontend/next.config.ts`
+  - `frontend/tsconfig.json`
+  - `frontend/app/layout.tsx`
+  - `frontend/app/page.tsx`
+  - `frontend/app/styles.css`
+  - `frontend/app/dev-chat/page.tsx`
+  - `frontend/components/dev-chat/ChatWindow.tsx`
+  - `frontend/components/dev-chat/DebugStatePanel.tsx`
+  - `frontend/components/dev-chat/MessageList.tsx`
+  - `frontend/lib/api.ts`
+  - `frontend/lib/websocket.ts`
+- Cross-layer impact:
+  - Frontend: changed
+  - Backend: changed
+  - Database: changed
+  - UI/UX: changed
+  - Tests: changed
+  - Config/Env: changed
+  - Docs: changed
+- Schema/migration notes: migration added for Phase 2 additive tables: `households`, `profiles`, `conversation_sessions`, `conversation_messages`, `profile_events`, `document_check_events`, and `zero_match_events`.
+- API contract notes: changed; added `/agent/sessions`, `/agent/message`, `/ws/chat`, `/profile/{id}`, `/households/{household_id}/members`, `/households/{household_id}/members/{profile_id}`, and `/schemes/{id}/document-check`.
+- Verification:
+  - `uv run --extra test pytest tests/unit/test_phase2_agent_utilities.py tests/unit/test_phase2_document_check.py tests/unit/test_phase2_session_store.py tests/integration/test_phase2_agent_routes.py` passed: 11 tests.
+  - `uv run --extra test pytest tests/unit tests/integration` passed: 25 tests.
+  - `ENABLE_SCHEDULER=false uv run --extra test python -c 'from app.main import create_app; app = create_app(); print(app.title, app.version, len(app.routes))'` passed: `AdhikarAI API phase-2 23`.
+  - `uv run --extra test alembic upgrade head --sql` passed and generated PostgreSQL SQL through `0002_phase_2`.
+  - `uv run --extra test alembic current` failed because no PostgreSQL server was reachable at `localhost:5432`.
+  - `uv run --extra test python -m compileall app` passed.
+  - `npm install` passed after pinning Next.js to `15.5.18` and React to `18.2.0`.
+  - `npm run typecheck` passed.
+  - `npm run build` passed.
+  - `npm run dev -- --hostname 127.0.0.1 --port 3000` passed and started the developer UI at `http://127.0.0.1:3000`.
+  - `npm audit --omit=dev` reported 2 moderate PostCSS advisories through Next.js; npm offered only a breaking `--force` path.
+- Follow-ups:
+  - Run `uv run --extra test alembic upgrade head` against a real PostgreSQL database after configuring `DATABASE_DIRECT_URL`.
+  - Re-run dependency audit when a patched stable Next.js 15 release is available for the PostCSS advisory.
+  - Add browser-level WebSocket tests once the test suite has a live ASGI client/database fixture for Phase 2 sessions.
+
 ## 2026-05-08 23:50 IST - Implement Phase 1 Backend Foundation
 
 - Request: Implement Phase 1 backend foundation including FastAPI APIs, PostgreSQL schema, eligibility engine, FAISS search scaffolding, admin CLI, seeds, expiry checker, and tests.

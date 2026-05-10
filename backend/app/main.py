@@ -4,7 +4,19 @@ from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import ORJSONResponse
 
-from app.api.routes import admin_index, admin_ingestion, admin_schemes, health, profile_match, schemes
+from app.api.routes import (
+    admin_index,
+    admin_ingestion,
+    admin_schemes,
+    agent_sessions,
+    document_check,
+    health,
+    households,
+    profile_match,
+    profiles,
+    schemes,
+    ws_chat,
+)
 from app.core.config import get_settings
 from app.core.errors import ApiError, api_error_handler, new_request_id
 from app.services.jobs.scheduler import build_scheduler
@@ -12,7 +24,7 @@ from app.services.jobs.scheduler import build_scheduler
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title="AdhikarAI API", version="phase-1")
+    app = FastAPI(title="AdhikarAI API", version="phase-2")
     app.add_exception_handler(ApiError, api_error_handler)
 
     @app.exception_handler(RequestValidationError)
@@ -40,6 +52,11 @@ def create_app() -> FastAPI:
         return response
 
     app.include_router(health.router)
+    app.include_router(agent_sessions.router)
+    app.include_router(ws_chat.router)
+    app.include_router(profiles.router)
+    app.include_router(households.router)
+    app.include_router(document_check.router)
     app.include_router(profile_match.router)
     app.include_router(schemes.router)
     app.include_router(admin_schemes.router)
@@ -63,4 +80,3 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-

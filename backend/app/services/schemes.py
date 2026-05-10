@@ -18,8 +18,9 @@ from app.schemas.scheme import (
 from app.services.eligibility.validation import validate_rule
 
 
-async def ensure_organisation(db: AsyncSession, organisation_id: str) -> Organisation:
-    org = await db.get(Organisation, UUID(organisation_id))
+async def ensure_organisation(db: AsyncSession, organisation_id: str | UUID) -> Organisation:
+    org_id = organisation_id if isinstance(organisation_id, UUID) else UUID(organisation_id)
+    org = await db.get(Organisation, org_id)
     if org is None:
         raise ApiError(404, "ORGANISATION_NOT_FOUND", "Organisation was not found.", "organisation_id")
     return org

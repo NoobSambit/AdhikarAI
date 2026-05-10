@@ -1,0 +1,151 @@
+:root {
+  color-scheme: light;
+  --bg: #f7f8fb;
+  --panel: #ffffff;
+  --border: #d7dce5;
+  --text: #172033;
+  --muted: #667085;
+  --accent: #0f766e;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.page {
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) 1fr;
+  gap: 16px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.panel,
+.chat {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.panel {
+  padding: 16px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.field label {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.field input,
+.field select,
+.composer textarea {
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  width: 100%;
+}
+
+.button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent);
+  color: white;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.button.secondary {
+  background: #334155;
+}
+
+.chat {
+  min-height: calc(100vh - 40px);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.chatHeader,
+.composer {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.composer {
+  border-top: 1px solid var(--border);
+  border-bottom: 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+.messages {
+  padding: 16px;
+  overflow: auto;
+}
+
+.message {
+  max-width: 760px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.message.user {
+  margin-left: auto;
+  background: #eef6ff;
+}
+
+.message.assistant {
+  background: #f8fafc;
+}
+
+details {
+  margin-top: 14px;
+}
+
+pre {
+  overflow: auto;
+  background: #111827;
+  color: #e5e7eb;
+  border-radius: 6px;
+  padding: 12px;
+  font-size: 12px;
+}
+
+@media (max-width: 800px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .chat {
+    min-height: 70vh;
+  }
+}
