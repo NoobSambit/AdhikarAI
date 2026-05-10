@@ -1,5 +1,86 @@
 # AdhikarAI Agent Change Log
 
+## 2026-05-08 23:50 IST - Implement Phase 1 Backend Foundation
+
+- Request: Implement Phase 1 backend foundation including FastAPI APIs, PostgreSQL schema, eligibility engine, FAISS search scaffolding, admin CLI, seeds, expiry checker, and tests.
+- Agent: Codex.
+- Changed files:
+  - `.gitignore`
+  - `backend/.env.example`
+  - `backend/.gitignore`
+  - `backend/alembic.ini`
+  - `backend/pyproject.toml`
+  - `backend/app/main.py`
+  - `backend/app/api/routes/admin_index.py`
+  - `backend/app/api/routes/admin_ingestion.py`
+  - `backend/app/api/routes/admin_schemes.py`
+  - `backend/app/api/routes/health.py`
+  - `backend/app/api/routes/profile_match.py`
+  - `backend/app/api/routes/schemes.py`
+  - `backend/app/cli/main.py`
+  - `backend/app/core/config.py`
+  - `backend/app/core/errors.py`
+  - `backend/app/core/security.py`
+  - `backend/app/db/base.py`
+  - `backend/app/db/session.py`
+  - `backend/app/db/migrations/env.py`
+  - `backend/app/db/migrations/script.py.mako`
+  - `backend/app/db/migrations/versions/0001_phase_1_foundation.py`
+  - `backend/app/db/models/admin_user.py`
+  - `backend/app/db/models/eligibility_rule.py`
+  - `backend/app/db/models/ingestion.py`
+  - `backend/app/db/models/notification.py`
+  - `backend/app/db/models/organisation.py`
+  - `backend/app/db/models/scheme.py`
+  - `backend/app/schemas/admin.py`
+  - `backend/app/schemas/common.py`
+  - `backend/app/schemas/ingestion.py`
+  - `backend/app/schemas/match.py`
+  - `backend/app/schemas/profile.py`
+  - `backend/app/schemas/scheme.py`
+  - `backend/app/seeds/central_schemes.v1.json`
+  - `backend/app/services/eligibility/criteria.py`
+  - `backend/app/services/eligibility/engine.py`
+  - `backend/app/services/eligibility/experta_engine.py`
+  - `backend/app/services/eligibility/matcher.py`
+  - `backend/app/services/eligibility/validation.py`
+  - `backend/app/services/ingestion/myscheme.py`
+  - `backend/app/services/jobs/expiry_checker.py`
+  - `backend/app/services/jobs/scheduler.py`
+  - `backend/app/services/schemes.py`
+  - `backend/app/services/search/embeddings.py`
+  - `backend/app/services/search/faiss_index.py`
+  - `backend/app/services/seeds.py`
+  - `backend/tests/conftest.py`
+  - `backend/tests/integration/test_admin_scheme_api.py`
+  - `backend/tests/integration/test_expiry_checker.py`
+  - `backend/tests/integration/test_faiss_search.py`
+  - `backend/tests/integration/test_profile_match_api.py`
+  - `backend/tests/unit/test_criteria_evaluator.py`
+  - `backend/tests/unit/test_near_miss.py`
+  - `backend/tests/unit/test_rule_validation.py`
+  - `backend/tests/unit/test_seed_data.py`
+- Cross-layer impact:
+  - Frontend: not impacted
+  - Backend: changed
+  - Database: changed
+  - UI/UX: not impacted
+  - Tests: changed
+  - Config/Env: changed
+  - Docs: changed
+- Schema/migration notes: migration added for Phase 1 PostgreSQL schema; `scheme_embeddings` uses portable JSONB metadata instead of mandatory pgvector.
+- API contract notes: changed; Phase 1 FastAPI REST contracts and standard error body were added.
+- Verification:
+  - `backend/.venv/bin/python -m pytest backend/tests/unit` passed: 9 tests.
+  - `backend/.venv/bin/python -m pytest backend/tests/integration` passed: 5 tests.
+  - `backend/.venv/bin/python -m pytest backend/tests` passed: 14 tests.
+  - `ENABLE_SCHEDULER=false .venv/bin/python -c 'from app.main import create_app; app = create_app(); print(app.title, app.version)'` passed.
+  - `timeout 20 .venv/bin/alembic upgrade head --sql` passed and generated PostgreSQL SQL.
+  - `timeout 10 .venv/bin/alembic current` timed out because no local PostgreSQL database was reachable.
+  - `python -m compileall backend/app` passed after source cleanup.
+- Follow-ups:
+  - Run `alembic upgrade head` against a real PostgreSQL database after configuring `DATABASE_DIRECT_URL`.
+
 ## 2026-05-08 22:21 IST - Add Shared Agent Instructions
 
 - Request: Create a project agent instruction file compatible with Codex, Gemini CLI, and Antigravity, including cross-layer change discipline and a change tracking system.
@@ -21,4 +102,3 @@
   - `date '+%Y-%m-%d %H:%M %Z'` succeeded to timestamp the log entry.
 - Follow-ups:
   - Configure Gemini CLI to load `AGENTS.md` directly, or symlink this file to `GEMINI.md` if the local Gemini setup cannot load custom context filenames.
-
