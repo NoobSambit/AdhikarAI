@@ -44,6 +44,36 @@ class Settings(BaseSettings):
     agent_json_repair_retries: int = 1
     agent_max_questions_before_result: int = 8
     agent_timeout_seconds: int = 20
+    voice_provider: str = "local"
+    asr_min_confidence: float = 0.70
+    voice_max_utterance_seconds: int = 20
+    voice_max_upload_mb: int = 8
+    browser_asr_fallback_after_ms: int = 2000
+    groq_whisper_model: str = "whisper-large-v3-turbo"
+    groq_audio_transcriptions_url: str | None = None
+    whisper_cpp_binary: str = "/opt/whisper.cpp/build/bin/whisper-cli"
+    whisper_cpp_model_path: str = "/models/ggml-large-v3.bin"
+    whisper_cpp_args: str = "-l auto -otxt -ojf --print-progress false --no-timestamps"
+    asr_timeout_seconds: int = 12
+    translation_provider: str = "local_indictrans2"
+    translation_service_url: str = "http://localhost:8001"
+    ai4bharat_translate_url: str | None = None
+    ai4bharat_api_key: str | None = None
+    ai4bharat_timeout_seconds: int = 3
+    google_translate_api_key: str | None = None
+    google_translate_url: str = "https://translation.googleapis.com/language/translate/v2"
+    tts_provider: str = "local_indictts"
+    local_tts_url: str = "http://localhost:8002"
+    local_tts_timeout_seconds: int = 8
+    google_tts_url: str = "https://texttospeech.googleapis.com/v1/text:synthesize"
+    google_application_credentials: str | None = None
+    tts_cache_ttl_seconds: int = 86_400
+    translation_cache_ttl_seconds: int = 604_800
+    store_audio_debug: bool = False
+
+    @property
+    def groq_transcriptions_url(self) -> str:
+        return self.groq_audio_transcriptions_url or f"{self.groq_base_url.rstrip('/')}/audio/transcriptions"
 
 
 @lru_cache

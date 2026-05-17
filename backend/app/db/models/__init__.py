@@ -8,6 +8,10 @@ from app.db.models.organisation import Organisation
 from app.db.models.profile import Profile
 from app.db.models.profile_event import DocumentCheckEvent, ProfileEvent, ZeroMatchEvent
 from app.db.models.scheme import FaissIndex, Scheme, SchemeCategory, SchemeEmbedding, SchemeStatusEvent
+from app.db.models.translation_event import TranslationEvent
+from app.db.models.tts_event import TTSEvent
+from app.db.models.user_language_preference import UserLanguagePreference
+from app.db.models.voice_turn import VoiceTurn
 
 __all__ = [
     "AdminNotification",
@@ -28,5 +32,9 @@ __all__ = [
     "SchemeEmbedding",
     "SchemeStatusEvent",
     "SchemeVersion",
+    "TranslationEvent",
+    "TTSEvent",
+    "UserLanguagePreference",
+    "VoiceTurn",
     "ZeroMatchEvent",
 ]

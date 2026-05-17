@@ -85,6 +85,11 @@ textarea {
   background: #334155;
 }
 
+.button svg,
+.button.secondary svg {
+  vertical-align: middle;
+}
+
 .chat {
   min-height: calc(100vh - 40px);
   display: grid;
@@ -138,6 +143,125 @@ pre {
   border-radius: 6px;
   padding: 12px;
   font-size: 12px;
+}
+
+.voiceComposer {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.recordButton {
+  min-height: 56px;
+  border: 0;
+  border-radius: 8px;
+  background: #0f766e;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  touch-action: none;
+}
+
+.recordButton.active {
+  background: #b42318;
+}
+
+.waveform {
+  min-height: 88px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.waveform span {
+  width: 8px;
+  min-height: 8px;
+  max-height: 72px;
+  border-radius: 4px;
+  background: #0f766e;
+}
+
+.voiceStatus {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.progress {
+  height: 8px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.progress span {
+  display: block;
+  height: 100%;
+  background: #2563eb;
+  transition: width 140ms ease;
+}
+
+.fallbackText {
+  margin: 0;
+  color: #b42318;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.segmented button,
+.speed,
+.iconButton {
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text);
+}
+
+.segmented button.active,
+.speed.active {
+  border-color: #0f766e;
+  background: #dff6f2;
+}
+
+.ttsPlayer {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+}
+
+.ttsControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.iconButton {
+  width: 44px;
+}
+
+.speed {
+  padding: 0 12px;
+}
+
+.fallbackComposer {
+  padding: 0;
+  border: 0;
 }
 
 @media (max-width: 800px) {

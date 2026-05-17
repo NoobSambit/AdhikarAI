@@ -1,5 +1,68 @@
 # AdhikarAI Agent Change Log
 
+## 2026-05-16 17:16 IST - Implement Phase 3 Voice Multilingual Pipeline
+
+- Request: Implement Phase 3 voice-first multilingual pipeline on top of the Phase 2 text agent, including backend voice APIs, providers, persistence, caching, and developer voice UI.
+- Agent: Codex.
+- Changed files:
+  - `backend/.env.example`
+  - `backend/pyproject.toml`
+  - `backend/uv.lock`
+  - `backend/app/main.py`
+  - `backend/app/core/config.py`
+  - `backend/app/api/routes/translate.py`
+  - `backend/app/api/routes/tts.py`
+  - `backend/app/api/routes/voice.py`
+  - `backend/app/db/migrations/versions/0003_phase_3_voice_multilingual.py`
+  - `backend/app/db/models/__init__.py`
+  - `backend/app/db/models/translation_event.py`
+  - `backend/app/db/models/tts_event.py`
+  - `backend/app/db/models/user_language_preference.py`
+  - `backend/app/db/models/voice_turn.py`
+  - `backend/app/schemas/translation.py`
+  - `backend/app/schemas/tts.py`
+  - `backend/app/schemas/voice.py`
+  - `backend/app/translation/*`
+  - `backend/app/tts/*`
+  - `backend/app/voice/*`
+  - `backend/tests/conftest.py`
+  - `backend/tests/integration/test_phase3_voice_routes.py`
+  - `backend/tests/unit/test_phase3_audio_validation.py`
+  - `backend/tests/unit/test_phase3_language_and_cache.py`
+  - `backend/tests/unit/test_phase3_voice_pipeline.py`
+  - `frontend/app/dev-voice/page.tsx`
+  - `frontend/app/styles.css`
+  - `frontend/components/voice/*`
+  - `frontend/lib/api.ts`
+  - `frontend/lib/audio/browserAsr.ts`
+  - `frontend/lib/i18n/languages.ts`
+  - `frontend/lib/i18n/messages.ts`
+- Cross-layer impact:
+  - Frontend: changed
+  - Backend: changed
+  - Database: changed
+  - UI/UX: changed
+  - Tests: changed
+  - Config/Env: changed
+  - Docs: changed
+- Schema/migration notes: migration added for additive Phase 3 tables `voice_turns`, `translation_events`, `tts_events`, and `user_language_preferences`.
+- API contract notes: changed; added `/voice/asr`, `/voice/turn`, `/ws/voice`, `/translate`, `/tts`, and `/voice/tts/audio/{cache_key}` while preserving Phase 2 `/agent/message` and `/ws/chat`.
+- Verification:
+  - `uv run --extra test pytest tests/unit/test_phase3_audio_validation.py tests/unit/test_phase3_language_and_cache.py tests/unit/test_phase3_voice_pipeline.py tests/integration/test_phase3_voice_routes.py` initially failed RED on missing Phase 3 modules, then passed: 9 tests.
+  - `uv run --extra test pytest tests/unit` passed: 26 tests.
+  - `uv run --extra test pytest tests/integration` passed: 8 tests.
+  - `uv run --extra test pytest` passed: 34 tests.
+  - `uv run --extra test python - <<'PY' ... create_app() ... PY` passed: FastAPI app imported and created.
+  - `uv run --extra test python -m compileall app` passed.
+  - `uv run --extra test alembic upgrade head --sql` passed and generated PostgreSQL SQL through `0003_phase_3`.
+  - `uv run --extra test alembic upgrade head` failed because no PostgreSQL server was reachable at `localhost:5432`.
+  - `npm run typecheck` passed.
+  - `npm run build` passed.
+  - `npm run dev -- -p 3000` started successfully; `curl -I http://localhost:3000/dev-voice` returned `HTTP/1.1 200 OK`.
+- Follow-ups:
+  - Frontend component tests are not configured in `frontend/package.json`, so requested component-level tests could not be run without adding a test runner.
+  - Real provider smoke tests require configured Whisper.cpp/Groq, translation, TTS, Redis, and PostgreSQL services.
+
 ## 2026-05-10 12:29 IST - Implement Phase 2 Agentic Conversation Layer
 
 - Request: Implement Phase 2 LangGraph-style multi-turn text agent, Redis-backed sessions, PostgreSQL conversation/profile schema, household/profile/document APIs, WebSocket/REST chat, tests, and a simple Next.js developer UI.

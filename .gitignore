@@ -23,8 +23,15 @@ env/
 # Backend runtime data
 backend/data/
 data/faiss/
+backend/tmp/
+tmp/
 *.sqlite
 *.sqlite3
+*.wav
+*.mp3
+*.webm
+*.ogg
+*.m4a
 
 # Node / Next.js
 node_modules/
@@ -37,6 +44,7 @@ build/
 coverage/
 playwright-report/
 test-results/
+*.tsbuildinfo
 
 # Logs
 *.log
@@ -53,4 +61,3 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
-

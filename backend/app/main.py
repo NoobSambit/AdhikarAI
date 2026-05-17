@@ -15,6 +15,9 @@ from app.api.routes import (
     profile_match,
     profiles,
     schemes,
+    translate,
+    tts,
+    voice,
     ws_chat,
 )
 from app.core.config import get_settings
@@ -62,6 +65,9 @@ def create_app() -> FastAPI:
     app.include_router(admin_schemes.router)
     app.include_router(admin_ingestion.router)
     app.include_router(admin_index.router)
+    app.include_router(voice.router)
+    app.include_router(translate.router)
+    app.include_router(tts.router)
 
     if settings.enable_scheduler:
         scheduler = build_scheduler()
