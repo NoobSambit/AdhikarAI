@@ -7,8 +7,10 @@ from fastapi.responses import ORJSONResponse
 from app.api.routes import (
     admin_index,
     admin_ingestion,
+    admin_panel,
     admin_schemes,
     agent_sessions,
+    dashboard,
     document_check,
     health,
     households,
@@ -64,6 +66,8 @@ def create_app() -> FastAPI:
     app.include_router(profile_match.router)
     app.include_router(schemes.router)
     app.include_router(admin_schemes.router)
+    app.include_router(dashboard.router)
+    app.include_router(admin_panel.router)
     app.include_router(admin_ingestion.router)
     app.include_router(admin_index.router)
     app.include_router(voice.router)

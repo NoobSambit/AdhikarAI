@@ -581,3 +581,289 @@ html[data-font-size="large"] body {
 html[data-font-size="extra_large"] body {
   font-size: 20px;
 }
+
+.dashboardShell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 248px 1fr;
+  background: #f6f8fb;
+  color: #111827;
+}
+
+.dashboardNav {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 18px;
+  border-right: 1px solid #d7dde8;
+  background: #ffffff;
+}
+
+.dashboardBrand {
+  margin: 0;
+  font-weight: 800;
+}
+
+.dashboardRole {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.dashboardNav nav {
+  display: grid;
+  gap: 6px;
+}
+
+.dashboardNavLink,
+.primaryButton,
+.secondaryButton {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 6px;
+  text-decoration: none;
+}
+
+.dashboardNavLink {
+  padding: 0 10px;
+  color: #334155;
+}
+
+.dashboardNavLink:focus-visible,
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible,
+.searchBox input:focus-visible,
+.denseForm input:focus-visible,
+.kanbanCard select:focus-visible {
+  outline: 3px solid #0f766e;
+  outline-offset: 2px;
+}
+
+.dashboardNotice {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #475569;
+  font-size: 13px;
+}
+
+.dashboardMain {
+  min-width: 0;
+  padding: 24px;
+}
+
+.dashboardPage {
+  display: grid;
+  gap: 18px;
+}
+
+.dashboardHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.dashboardHeader h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.dashboardHeader p {
+  margin: 4px 0 0;
+  color: #64748b;
+}
+
+.primaryButton,
+.secondaryButton {
+  border: 1px solid #0f766e;
+  padding: 0 14px;
+  font-weight: 700;
+}
+
+.primaryButton {
+  background: #0f766e;
+  color: #ffffff;
+}
+
+.secondaryButton {
+  background: #ffffff;
+  color: #0f766e;
+}
+
+.dashboardToolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.searchBox {
+  max-width: 440px;
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0 10px;
+  background: #ffffff;
+}
+
+.searchBox input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  font: inherit;
+}
+
+.dashboardPanel,
+.kanbanCard {
+  border: 1px solid #d7dde8;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.dashboardPanel {
+  padding: 14px;
+}
+
+.panelTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panelTitle h2 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.denseTable {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+}
+
+.denseTable th,
+.denseTable td {
+  border-bottom: 1px solid #e2e8f0;
+  padding: 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.denseTable th {
+  color: #475569;
+  font-size: 13px;
+}
+
+.denseForm {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  max-width: 980px;
+}
+
+.denseForm label {
+  display: grid;
+  gap: 5px;
+  color: #334155;
+  font-weight: 700;
+}
+
+.denseForm input,
+.kanbanCard select {
+  min-height: 44px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 8px;
+  font: inherit;
+}
+
+.dashboardStatus {
+  color: #166534;
+  font-weight: 700;
+}
+
+.dashboardError {
+  color: #991b1b;
+  font-weight: 700;
+}
+
+.kanbanGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.kanbanColumn {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.kanbanColumn h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.kanbanCard {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.trainingList {
+  display: grid;
+  gap: 8px;
+  max-width: 540px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+@media (max-width: 900px) {
+  .dashboardShell {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboardNav {
+    position: static;
+    height: auto;
+  }
+
+  .dashboardNav nav,
+  .kanbanGrid,
+  .denseForm {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .dashboardMain {
+    padding: 14px;
+  }
+
+  .dashboardHeader,
+  .dashboardToolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .kanbanGrid,
+  .denseForm {
+    grid-template-columns: 1fr;
+  }
+}

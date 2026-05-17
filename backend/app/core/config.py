@@ -83,6 +83,19 @@ class Settings(BaseSettings):
     msg91_template_id: str | None = None
     vapid_public_key: str | None = None
     vapid_private_key: str | None = None
+    dashboard_enabled: bool = True
+    dashboard_session_idle_timeout_seconds: int = 3600
+    rate_limit_user_per_day: int = 100
+    rate_limit_operator_per_day: int = 1000
+    rate_limit_guest_per_day: int = 50
+    export_storage_provider: str = "local"
+    export_max_rows: int = 5000
+    bulk_eligibility_max_rows: int = 500
+    bulk_eligibility_max_mb: int = 2
+    sms_notifications_enabled: bool = False
+    msg91_sms_template_id: str | None = None
+    quality_monitor_cron: str = "0 * * * *"
+    scheme_expiry_warning_days: int = 30
 
     @property
     def groq_transcriptions_url(self) -> str:

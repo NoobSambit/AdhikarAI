@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
+from app.rate_limit.service import check_guest_limit
 from app.schemas.agent import ChatInputModel, ChatOutputModel, CreateSessionRequest, CreateSessionResponse
 from app.services.sessions.session_service import get_or_create_session, get_session_state, handle_chat_turn
 
@@ -22,4 +23,6 @@ async def get_agent_session(session_id: str, organisation_id: UUID, db: AsyncSes
 
 @router.post("/agent/message", response_model=ChatOutputModel)
 async def post_agent_message(request: ChatInputModel, db: AsyncSession = Depends(get_db)) -> ChatOutputModel:
+    if request.organisation_id is not None:
+        await check_guest_limit(request.organisation_id, request.session_id)
     return await handle_chat_turn(request, db)

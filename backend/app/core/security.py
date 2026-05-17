@@ -11,7 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.errors import ApiError
-from app.db.models import User
+from app.dashboard.rbac import DashboardActor
+from app.db.models import OrganisationMember, User
 from app.db.session import get_db
 
 
@@ -46,6 +47,29 @@ def create_session_jwt(user: User) -> str:
     signing_input = f"{_b64url(json.dumps(header, separators=(',', ':')).encode())}.{_b64url(json.dumps(payload, separators=(',', ':')).encode())}"
     signature = hmac.new(settings.auth_jwt_secret.encode(), signing_input.encode(), hashlib.sha256).digest()
     return f"{signing_input}.{_b64url(signature)}"
+
+
+def _sign_payload(payload: dict) -> str:
+    settings = get_settings()
+    header = {"alg": "HS256", "typ": "JWT"}
+    signing_input = f"{_b64url(json.dumps(header, separators=(',', ':')).encode())}.{_b64url(json.dumps(payload, separators=(',', ':')).encode())}"
+    signature = hmac.new(settings.auth_jwt_secret.encode(), signing_input.encode(), hashlib.sha256).digest()
+    return f"{signing_input}.{_b64url(signature)}"
+
+
+def create_dashboard_session_jwt(member: OrganisationMember) -> str:
+    settings = get_settings()
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": str(member.user_id or member.admin_user_id),
+        "member_id": str(member.id),
+        "org": str(member.organisation_id),
+        "role": member.role,
+        "typ": "dashboard",
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(seconds=settings.auth_jwt_ttl_seconds)).timestamp()),
+    }
+    return _sign_payload(payload)
 
 
 def decode_session_jwt(token: str) -> dict:
@@ -89,3 +113,24 @@ async def require_user(
     if user is None or user.deleted_at is not None:
         raise ApiError(401, "NOT_AUTHENTICATED", "Please login with phone to continue.", "session")
     return user
+
+
+async def require_dashboard_actor(
+    token: str | None = Cookie(default=None, alias=get_settings().auth_cookie_name),
+    db: AsyncSession = Depends(get_db),
+) -> DashboardActor:
+    if not token:
+        raise ApiError(401, "NOT_AUTHENTICATED", "Please login to continue.", "session")
+    payload = decode_session_jwt(token)
+    if payload.get("typ") != "dashboard" or not payload.get("member_id"):
+        raise ApiError(401, "DASHBOARD_SESSION_REQUIRED", "Please login to the dashboard.", "session")
+    member = await db.get(OrganisationMember, UUID(payload["member_id"]))
+    if member is None or not member.is_active:
+        raise ApiError(401, "DASHBOARD_SESSION_REQUIRED", "Please login to the dashboard.", "session")
+    return DashboardActor(
+        user_id=UUID(payload["sub"]),
+        member_id=member.id,
+        organisation_id=member.organisation_id,
+        role=member.role,
+        display_name=member.display_name,
+    )

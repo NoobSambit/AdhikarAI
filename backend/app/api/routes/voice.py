@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.db.session import get_db
+from app.rate_limit.service import check_guest_limit
 from app.schemas.voice import AsrResponseModel, VoiceTurnRequestModel, VoiceTurnResponseModel, VoiceWsStartMessageModel
 from app.translation.providers import get_translation_client
 from app.tts.providers import get_tts_client
@@ -45,6 +46,7 @@ async def post_voice_turn(
     client_duration_ms: int | None = Form(default=None),
     db: AsyncSession = Depends(get_db),
 ) -> VoiceTurnResponseModel:
+    await check_guest_limit(organisation_id, session_id)
     settings = get_settings()
     audio_bytes = await audio.read()
     validate_audio_upload(audio_bytes, audio.content_type, settings.voice_max_upload_mb)

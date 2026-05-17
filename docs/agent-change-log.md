@@ -1,5 +1,81 @@
 # AdhikarAI Agent Change Log
 
+## 2026-05-17 11:01 IST - Implement Phase 5 Dashboard and Admin Panel
+
+- Request: Implement Phase 5 NGO/CSC dashboard and admin panel with organisation-scoped RBAC, dashboard APIs, admin workflows, rate limiting, frontend routes, tests, and documentation.
+- Agent: Codex.
+- Changed files:
+  - `backend/.env.example`
+  - `backend/app/main.py`
+  - `backend/app/core/config.py`
+  - `backend/app/core/errors.py`
+  - `backend/app/core/security.py`
+  - `backend/app/api/routes/agent_sessions.py`
+  - `backend/app/api/routes/profile_match.py`
+  - `backend/app/api/routes/voice.py`
+  - `backend/app/api/routes/dashboard.py`
+  - `backend/app/api/routes/admin_panel.py`
+  - `backend/app/admin_panel/__init__.py`
+  - `backend/app/admin_panel/queries.py`
+  - `backend/app/admin_panel/scheme_drafts.py`
+  - `backend/app/dashboard/__init__.py`
+  - `backend/app/dashboard/audit.py`
+  - `backend/app/dashboard/beneficiaries.py`
+  - `backend/app/dashboard/bulk_eligibility.py`
+  - `backend/app/dashboard/rbac.py`
+  - `backend/app/db/models/__init__.py`
+  - `backend/app/db/models/phase5.py`
+  - `backend/app/db/migrations/versions/0005_phase_5_dashboard_admin.py`
+  - `backend/app/rate_limit/__init__.py`
+  - `backend/app/rate_limit/service.py`
+  - `backend/app/schemas/phase5.py`
+  - `backend/tests/unit/test_phase5_csv.py`
+  - `backend/tests/unit/test_phase5_rate_limit.py`
+  - `backend/tests/unit/test_phase5_rbac.py`
+  - `frontend/app/admin/analytics/page.tsx`
+  - `frontend/app/admin/quality/page.tsx`
+  - `frontend/app/admin/schemes/page.tsx`
+  - `frontend/app/admin/unmatched-queries/page.tsx`
+  - `frontend/app/dashboard/beneficiaries/new/page.tsx`
+  - `frontend/app/dashboard/beneficiaries/page.tsx`
+  - `frontend/app/dashboard/bulk-eligibility/page.tsx`
+  - `frontend/app/dashboard/exports/page.tsx`
+  - `frontend/app/dashboard/help/page.tsx`
+  - `frontend/app/dashboard/layout.tsx`
+  - `frontend/app/dashboard/page.tsx`
+  - `frontend/app/dashboard/scheme-guide/page.tsx`
+  - `frontend/app/dashboard/status-board/page.tsx`
+  - `frontend/app/styles.css`
+  - `frontend/components/dashboard/DashboardShell.tsx`
+  - `frontend/lib/api.ts`
+  - `frontend/tests/phase5.static.test.mjs`
+- Cross-layer impact:
+  - Frontend: changed
+  - Backend: changed
+  - Database: changed
+  - UI/UX: changed
+  - Tests: changed
+  - Config/Env: changed
+  - Docs: changed
+- Schema/migration notes: migration added for additive Phase 5 tables including organisation members, beneficiaries, notes, follow-ups, scheme assignments, bulk eligibility jobs/rows, operator notifications, unmatched queries, scheme drafts/audit logs, quality flags, rate-limit events, and audit logs; all tenant-scoped tables include `organisation_id`.
+- API contract notes: changed; added dashboard-authenticated `/dashboard/*` APIs, dashboard-authenticated `/admin/*` Phase 5 APIs, expanded dashboard JWT claims, and added rate-limit checks to profile match, agent message, voice turn, dashboard eligibility, and bulk eligibility paths.
+- Verification:
+  - `uv run --extra test pytest tests/unit/test_phase5_rbac.py tests/unit/test_phase5_csv.py tests/unit/test_phase5_rate_limit.py` passed: 8 tests.
+  - `uv run --extra test pytest` passed: 52 tests.
+  - `uv run --extra test python -m compileall app` passed.
+  - `uv run --extra test python -c "from app.main import app; print(app.title, app.version, len(app.routes))"` passed: `AdhikarAI API phase-4 71`.
+  - `uv run --extra test alembic upgrade head --sql` passed and generated PostgreSQL SQL through `0005_phase_5`.
+  - `uv run --extra test alembic upgrade head` failed because no PostgreSQL server was reachable at `localhost:5432`.
+  - `npm run typecheck` passed.
+  - `npm run test:phase4 && node tests/phase5.static.test.mjs` passed.
+  - `npm run build` passed; dashboard and admin routes were included in the production build.
+  - `npm run dev -- --hostname 127.0.0.1 --port 3000` started; `curl -I /dashboard`, `curl -I /dashboard/beneficiaries`, and `curl -I /admin/quality` returned `200 OK`.
+- Follow-ups:
+  - Replace local in-memory rate limiting with Redis/Upstash counters for multi-instance deployments.
+  - Add database-backed integration tests for Phase 5 endpoint allow/deny paths once a PostgreSQL test service is available.
+  - Complete fully asynchronous CSV processing/result storage and richer scheme impact preview with sample profiles.
+  - Add Playwright browser viewport checks when browser tooling is installed.
+
 ## 2026-05-17 10:44 IST - Implement Phase 4 User PWA
 
 - Request: Implement Phase 4 production user-facing PWA with offline support, authentication, saved schemes, checklists, status tracking, identity sandbox flows, notifications, action plans, and offline sync.

@@ -76,6 +76,43 @@ export interface SchemeCardView {
   saved: boolean;
 }
 
+export type DashboardRole = "super_admin" | "ngo_admin" | "operator";
+
+export interface DashboardMe {
+  member_id: string;
+  organisation_id: string;
+  role: DashboardRole;
+  display_name: string;
+  permissions: string[];
+}
+
+export interface DashboardBeneficiary {
+  id: string;
+  name: string;
+  phone_e164?: string;
+  state_code: string;
+  language_code: string;
+  village?: string;
+  district?: string;
+  profile_id: string;
+  assigned_operator_id?: string;
+  application_statuses: Array<{ id?: string; scheme_id: string; status: string }>;
+  follow_up?: { id?: string; due_date: string; reason?: string; status?: string };
+}
+
+export interface DashboardListResponse {
+  items: DashboardBeneficiary[];
+  total: number;
+}
+
+export interface QualityFlag {
+  id: string;
+  flag_type: string;
+  severity: "info" | "warning" | "critical";
+  details: Record<string, unknown>;
+  reviewed_at?: string;
+}
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 export async function createSession(organisationId: string, sessionId: string, languageCode: string) {
@@ -228,4 +265,41 @@ export async function synthesizeSpeech(text: string, languageCode: string, speak
 
 export function resolveAudioUrl(audioUrl: string) {
   return audioUrl.startsWith("http") ? audioUrl : `${API_BASE_URL}${audioUrl}`;
+}
+
+export async function getDashboardMe() {
+  return jsonFetch<DashboardMe>("/dashboard/me");
+}
+
+export async function listDashboardBeneficiaries(params: Record<string, string> = {}) {
+  const query = new URLSearchParams(params);
+  return jsonFetch<DashboardListResponse>(`/dashboard/beneficiaries${query.size ? `?${query}` : ""}`);
+}
+
+export async function createDashboardBeneficiary(payload: Record<string, unknown>) {
+  return jsonFetch<DashboardBeneficiary>("/dashboard/beneficiaries", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export async function getStatusBoard() {
+  return jsonFetch<Record<string, Array<Record<string, string>>>>("/dashboard/status-board");
+}
+
+export async function updateDashboardApplicationStatus(statusId: string, status: string) {
+  return jsonFetch(`/dashboard/application-status/${statusId}`, { method: "PATCH", body: JSON.stringify({ status }) });
+}
+
+export async function getSchemeGuide() {
+  return jsonFetch<{ items: Array<Record<string, string>> }>("/dashboard/scheme-guide");
+}
+
+export async function getUnmatchedQueries() {
+  return jsonFetch<{ items: Array<{ normalized_query_text: string; frequency: number; languages: string[]; latest_at: string }> }>("/admin/unmatched-queries");
+}
+
+export async function getQualityFlags() {
+  return jsonFetch<{ items: QualityFlag[] }>("/admin/quality-flags");
+}
+
+export async function markQualityFlagReviewed(flagId: string, reviewNotes: string) {
+  return jsonFetch(`/admin/quality-flags/${flagId}/review`, { method: "POST", body: JSON.stringify({ review_notes: reviewNotes }) });
 }

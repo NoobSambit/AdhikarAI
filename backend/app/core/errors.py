@@ -30,10 +30,11 @@ def error_body(error: ApiError, request_id: str) -> dict[str, Any]:
     }
     if error.details is not None:
         payload["error"]["details"] = error.details
+        if isinstance(error.details, dict) and "retry_after_seconds" in error.details:
+            payload["error"]["retry_after_seconds"] = error.details["retry_after_seconds"]
     return payload
 
 
 async def api_error_handler(request: Request, exc: ApiError) -> ORJSONResponse:
     request_id = getattr(request.state, "request_id", new_request_id())
     return ORJSONResponse(error_body(exc, request_id), status_code=exc.status_code)
-
