@@ -1,9 +1,16 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./styles.css";
 
 export const metadata: Metadata = {
-  title: "AdhikarAI Dev Chat",
-  description: "Developer test UI for Phase 2 text agent"
+  title: "AdhikarAI",
+  description: "Voice-first welfare scheme helper",
+  manifest: "/manifest.json"
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0f766e",
+  width: "device-width",
+  initialScale: 1
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

@@ -39,6 +39,43 @@ export interface TtsResponse {
   cached: boolean;
 }
 
+export interface SendOtpResponse {
+  challenge_id: string;
+  masked_phone: string;
+  retry_after_seconds: number;
+}
+
+export interface AuthUser {
+  id: string;
+  phone_e164: string;
+  language_code: LanguageCode;
+  primary_profile_id?: string;
+  high_contrast_enabled: boolean;
+  font_size: "default" | "large" | "extra_large";
+  notification_opt_in: boolean;
+}
+
+export interface ChecklistItemView {
+  document_name: string;
+  is_mandatory: boolean;
+  status: "not_gathered" | "gathered" | "verified" | "rejected";
+  accepted_substitutes: Array<Record<string, unknown>>;
+}
+
+export interface SchemeCardView {
+  scheme_id: string;
+  name: string;
+  plain_language_benefit: string;
+  benefit_amount: string;
+  eligibility_status: "eligible" | "near_miss" | "ineligible";
+  failed_criterion?: string;
+  how_to_qualify?: string;
+  documents: ChecklistItemView[];
+  application_steps: string[];
+  application_url?: string;
+  saved: boolean;
+}
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 export async function createSession(organisationId: string, sessionId: string, languageCode: string) {
@@ -101,13 +138,80 @@ export async function sendVoiceTurn(
   }
   form.set("audio", audio, "voice.webm");
   onProgress?.(15);
-  const response = await fetch(`${API_BASE_URL}/voice/turn`, { method: "POST", body: form });
+  const response = await fetch(`${API_BASE_URL}/voice/turn`, { method: "POST", body: form, credentials: "include" });
   onProgress?.(85);
   if (!response.ok) {
     throw new Error(await response.text());
   }
   onProgress?.(100);
   return (await response.json()) as VoiceTurnResponse;
+}
+
+async function jsonFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    credentials: "include",
+    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) }
+  });
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
+  return (await response.json()) as T;
+}
+
+export async function sendOtp(organisationId: string, phoneE164: string) {
+  return jsonFetch<SendOtpResponse>("/auth/send-otp", {
+    method: "POST",
+    body: JSON.stringify({ organisation_id: organisationId, phone_e164: phoneE164 })
+  });
+}
+
+export async function verifyOtp(organisationId: string, challengeId: string, otp: string, guestProfileId?: string, languageCode: LanguageCode = "hi") {
+  return jsonFetch<{ user: AuthUser; migrated_guest_profile: boolean }>("/auth/verify-otp", {
+    method: "POST",
+    body: JSON.stringify({ organisation_id: organisationId, challenge_id: challengeId, otp, guest_profile_id: guestProfileId, language_code: languageCode })
+  });
+}
+
+export async function getMe() {
+  return jsonFetch<{ user: AuthUser; primary_profile?: { id: string } }>("/me");
+}
+
+export async function updateMe(settings: Partial<Pick<AuthUser, "language_code" | "high_contrast_enabled" | "font_size" | "notification_opt_in">> & { guest_profile_id?: string }) {
+  return jsonFetch<{ user: AuthUser }>("/me", { method: "PATCH", body: JSON.stringify(settings) });
+}
+
+export async function saveScheme(profileId: string, schemeId: string) {
+  return jsonFetch<{ saved: boolean; reminder_scheduled_at: string }>("/saved-schemes", {
+    method: "POST",
+    body: JSON.stringify({ profile_id: profileId, scheme_id: schemeId })
+  });
+}
+
+export async function updateChecklist(payload: {
+  profile_id: string;
+  scheme_id: string;
+  document_name: string;
+  status: ChecklistItemView["status"];
+  idempotency_key: string;
+  is_mandatory?: boolean;
+  accepted_substitutes?: Array<Record<string, unknown>>;
+}) {
+  return jsonFetch<{ items: ChecklistItemView[]; ready_to_apply: boolean }>("/checklists", {
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function updateApplicationStatus(profileId: string, schemeId: string, status: string) {
+  return jsonFetch("/application-status", {
+    method: "PATCH",
+    body: JSON.stringify({ profile_id: profileId, scheme_id: schemeId, status })
+  });
+}
+
+export async function syncOffline(events: Array<Record<string, unknown>>) {
+  return jsonFetch("/offline-sync", { method: "POST", body: JSON.stringify({ events }) });
 }
 
 export async function synthesizeSpeech(text: string, languageCode: string, speakingRate: number) {

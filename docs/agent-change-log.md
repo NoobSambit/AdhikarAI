@@ -1,5 +1,62 @@
 # AdhikarAI Agent Change Log
 
+## 2026-05-17 10:44 IST - Implement Phase 4 User PWA
+
+- Request: Implement Phase 4 production user-facing PWA with offline support, authentication, saved schemes, checklists, status tracking, identity sandbox flows, notifications, action plans, and offline sync.
+- Agent: Codex.
+- Changed files:
+  - `backend/.env.example`
+  - `backend/app/main.py`
+  - `backend/app/core/config.py`
+  - `backend/app/core/security.py`
+  - `backend/app/api/routes/phase4.py`
+  - `backend/app/db/models/__init__.py`
+  - `backend/app/db/models/phase4.py`
+  - `backend/app/db/migrations/versions/0004_phase_4_user_pwa.py`
+  - `backend/app/schemas/phase4.py`
+  - `backend/app/services/phase4.py`
+  - `backend/tests/integration/test_phase4_routes.py`
+  - `backend/tests/unit/test_phase4_logic.py`
+  - `backend/tests/unit/test_phase4_security.py`
+  - `frontend/app/layout.tsx`
+  - `frontend/app/page.tsx`
+  - `frontend/app/styles.css`
+  - `frontend/components/pwa/InstallPrompt.tsx`
+  - `frontend/lib/api.ts`
+  - `frontend/lib/offlineDb.ts`
+  - `frontend/package.json`
+  - `frontend/package-lock.json`
+  - `frontend/public/manifest.json`
+  - `frontend/public/sw.js`
+  - `frontend/public/offline.html`
+  - `frontend/public/icons/icon.svg`
+  - `frontend/tests/phase4.static.test.mjs`
+- Cross-layer impact:
+  - Frontend: changed
+  - Backend: changed
+  - Database: changed
+  - UI/UX: changed
+  - Tests: changed
+  - Config/Env: changed
+  - Docs: changed
+- Schema/migration notes: migration added for additive Phase 4 tables: `users`, `otp_challenges`, `saved_schemes`, `document_checklist_items`, `digilocker_connections`, `verified_documents`, `application_statuses`, `application_status_events`, `notification_subscriptions`, `notification_jobs`, `action_plans`, and `offline_sync_events`.
+- API contract notes: changed; added `/auth/send-otp`, `/auth/verify-otp`, `/me`, `/saved-schemes`, `/checklists`, `/digilocker/start`, `/digilocker/callback`, `/aadhaar/prefill/start`, `/application-status`, `/notifications/subscribe`, `/action-plans`, and `/offline-sync`; Phase 1-3 routes are preserved.
+- Verification:
+  - `uv run --extra test pytest tests/unit/test_phase4_security.py tests/unit/test_phase4_logic.py tests/integration/test_phase4_routes.py` passed: 10 tests.
+  - `uv run --extra test pytest` passed: 44 tests.
+  - `ENABLE_SCHEDULER=false uv run --extra test python -c 'from app.main import create_app; app = create_app(); print(app.title, app.version, len(app.routes))'` passed: `AdhikarAI API phase-4 44`.
+  - `uv run --extra test python -m compileall app` passed.
+  - `uv run --extra test alembic upgrade head --sql` passed and generated PostgreSQL SQL through `0004_phase_4`.
+  - `uv run --extra test alembic upgrade head` failed because no PostgreSQL server was reachable at `localhost:5432`.
+  - `npm run typecheck` passed.
+  - `npm run test:phase4` passed.
+  - `npm run build` passed; `/` first-load JS reported 115 kB.
+  - `npm run dev -- --hostname 127.0.0.1 --port 3000` started; `curl -I /`, `curl /manifest.json`, and `curl /sw.js` passed smoke checks.
+- Follow-ups:
+  - Run Alembic upgrade against a real PostgreSQL database.
+  - Add browser-based component/E2E and Lighthouse PWA checks when Playwright/Lighthouse tooling is installed.
+  - Replace sandbox/mock MSG91, DigiLocker, Aadhaar, notification, and action-plan storage providers with deployment credentials and provider clients.
+
 ## 2026-05-16 17:16 IST - Implement Phase 3 Voice Multilingual Pipeline
 
 - Request: Implement Phase 3 voice-first multilingual pipeline on top of the Phase 2 text agent, including backend voice APIs, providers, persistence, caching, and developer voice UI.

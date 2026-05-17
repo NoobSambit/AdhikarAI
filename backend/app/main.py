@@ -12,6 +12,7 @@ from app.api.routes import (
     document_check,
     health,
     households,
+    phase4,
     profile_match,
     profiles,
     schemes,
@@ -27,7 +28,7 @@ from app.services.jobs.scheduler import build_scheduler
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title="AdhikarAI API", version="phase-2")
+    app = FastAPI(title="AdhikarAI API", version="phase-4")
     app.add_exception_handler(ApiError, api_error_handler)
 
     @app.exception_handler(RequestValidationError)
@@ -68,6 +69,7 @@ def create_app() -> FastAPI:
     app.include_router(voice.router)
     app.include_router(translate.router)
     app.include_router(tts.router)
+    app.include_router(phase4.router)
 
     if settings.enable_scheduler:
         scheduler = build_scheduler()

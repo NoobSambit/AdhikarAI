@@ -5,13 +5,15 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:phase4": "node tests/phase4.static.test.mjs"
   },
   "dependencies": {
+    "idb": "^8.0.3",
+    "lucide-react": "^0.468.0",
     "next": "15.5.18",
     "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "lucide-react": "^0.468.0"
+    "react-dom": "18.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

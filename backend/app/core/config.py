@@ -70,6 +70,19 @@ class Settings(BaseSettings):
     tts_cache_ttl_seconds: int = 86_400
     translation_cache_ttl_seconds: int = 604_800
     store_audio_debug: bool = False
+    auth_jwt_secret: str = "change-me-phase-4"
+    auth_cookie_secure: bool = True
+    auth_cookie_name: str = "adhikarai_session"
+    auth_jwt_ttl_seconds: int = 2_592_000
+    otp_provider: str = "mock"
+    otp_expiry_seconds: int = 300
+    otp_retry_after_seconds: int = 30
+    otp_max_attempts: int = 5
+    msg91_base_url: str = "https://control.msg91.com/api/v5"
+    msg91_auth_key: str | None = None
+    msg91_template_id: str | None = None
+    vapid_public_key: str | None = None
+    vapid_private_key: str | None = None
 
     @property
     def groq_transcriptions_url(self) -> str:

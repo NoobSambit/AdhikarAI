@@ -5,6 +5,20 @@ from app.db.models.household import Household
 from app.db.models.ingestion import IngestionPayload, IngestionRun
 from app.db.models.notification import AdminNotification
 from app.db.models.organisation import Organisation
+from app.db.models.phase4 import (
+    ActionPlan,
+    ApplicationStatus,
+    ApplicationStatusEvent,
+    DigiLockerConnection,
+    DocumentChecklistItem,
+    NotificationJob,
+    NotificationSubscription,
+    OfflineSyncEvent,
+    OtpChallenge,
+    SavedScheme,
+    User,
+    VerifiedDocument,
+)
 from app.db.models.profile import Profile
 from app.db.models.profile_event import DocumentCheckEvent, ProfileEvent, ZeroMatchEvent
 from app.db.models.scheme import FaissIndex, Scheme, SchemeCategory, SchemeEmbedding, SchemeStatusEvent
@@ -16,17 +30,27 @@ from app.db.models.voice_turn import VoiceTurn
 __all__ = [
     "AdminNotification",
     "AdminUser",
+    "ActionPlan",
+    "ApplicationStatus",
+    "ApplicationStatusEvent",
     "ConversationMessage",
     "ConversationSession",
+    "DigiLockerConnection",
     "DocumentCheckEvent",
+    "DocumentChecklistItem",
     "EligibilityRule",
     "FaissIndex",
     "Household",
     "IngestionPayload",
     "IngestionRun",
+    "NotificationJob",
+    "NotificationSubscription",
+    "OfflineSyncEvent",
     "Organisation",
+    "OtpChallenge",
     "Profile",
     "ProfileEvent",
+    "SavedScheme",
     "Scheme",
     "SchemeCategory",
     "SchemeEmbedding",
@@ -34,7 +58,9 @@ __all__ = [
     "SchemeVersion",
     "TranslationEvent",
     "TTSEvent",
+    "User",
     "UserLanguagePreference",
+    "VerifiedDocument",
     "VoiceTurn",
     "ZeroMatchEvent",
 ]
