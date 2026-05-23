@@ -1,5 +1,39 @@
 # AdhikarAI Agent Change Log
 
+## 2026-05-22 16:52 IST - Post-PRD Stabilization Audit
+
+- Request: Perform a full Phase 1-5 PRD compliance audit, run verification, fix only high-priority issues, and produce a stabilization report.
+- Agent: Codex
+- Changed files:
+  - `backend/app/rate_limit/service.py`
+  - `backend/tests/unit/test_phase5_rate_limit.py`
+  - `docs/prd-compliance-audit.md`
+  - `docs/agent-change-log.md`
+- Cross-layer impact:
+  - Frontend: not impacted
+  - Backend: changed
+  - Database: not impacted
+  - UI/UX: not impacted
+  - Tests: changed
+  - Config/Env: not impacted
+  - Docs: changed
+- Schema/migration notes: not needed; rate-limit counters use configured Redis and do not alter persisted schema.
+- API contract notes: changed only in rate-limit error details by adding `retry_at` while preserving `retry_after_seconds`.
+- Verification:
+  - `uv run --extra test pytest` passed: 53 tests.
+  - `uv run --extra test python -m compileall app` passed.
+  - `uv run --extra test python -c "from app.main import create_app; app=create_app(); print(app.title, app.version, len(app.routes))"` passed: `AdhikarAI API phase-4 71`.
+  - `uv run --extra test alembic upgrade head --sql` passed and generated 966 lines through `0005_phase_5`.
+  - `uv run --extra test alembic upgrade head` failed because no PostgreSQL server was reachable at `localhost:5432`.
+  - `npm run typecheck` passed.
+  - `npm run build` passed; 18 App Router pages generated.
+  - `npm run test:phase4 && node tests/phase5.static.test.mjs` passed.
+  - Local FastAPI route smoke passed on `127.0.0.1:8009`: `/health` returned 200, `/dashboard/me` and `/me` returned expected 401, and OpenAPI contained key Phase 1-5 routes.
+  - Local Next route smoke passed on `127.0.0.1:3011`: `/`, `/dashboard/*`, `/admin/*`, `/dev-chat`, `/dev-voice`, `/manifest.json`, `/sw.js`, and `/offline.html` returned 200.
+- Follow-ups:
+  - Run end-to-end flows with real PostgreSQL and Redis.
+  - Replace demo/mock providers and add Playwright E2E for beneficiary, dashboard, and admin flows.
+
 ## 2026-05-17 11:01 IST - Implement Phase 5 Dashboard and Admin Panel
 
 - Request: Implement Phase 5 NGO/CSC dashboard and admin panel with organisation-scoped RBAC, dashboard APIs, admin workflows, rate limiting, frontend routes, tests, and documentation.
