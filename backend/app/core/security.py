@@ -128,7 +128,7 @@ async def require_dashboard_actor(
     if member is None or not member.is_active:
         raise ApiError(401, "DASHBOARD_SESSION_REQUIRED", "Please login to the dashboard.", "session")
     return DashboardActor(
-        user_id=UUID(payload["sub"]),
+        user_id=member.user_id,
         member_id=member.id,
         organisation_id=member.organisation_id,
         role=member.role,

@@ -25,7 +25,7 @@ ROLE_PERMISSIONS: dict[DashboardRole, set[str]] = {
 
 @dataclass(frozen=True, slots=True)
 class DashboardActor:
-    user_id: UUID
+    user_id: UUID | None
     member_id: UUID
     organisation_id: UUID
     role: DashboardRole

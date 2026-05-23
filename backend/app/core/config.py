@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     app_timezone: str = "Asia/Kolkata"
     fastapi_host: str = "0.0.0.0"
     fastapi_port: int = 8000
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
     database_url: str = "postgresql+asyncpg://adhikarai:adhikarai@localhost:5432/adhikarai"
     database_direct_url: str = "postgresql+asyncpg://adhikarai:adhikarai@localhost:5432/adhikarai"
     db_pool_size: int = 3

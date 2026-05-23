@@ -2,6 +2,7 @@ from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, Request, Response
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse
 
 from app.api.routes import (
@@ -31,6 +32,15 @@ from app.services.jobs.scheduler import build_scheduler
 def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title="AdhikarAI API", version="phase-4")
+    cors_origins = [origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()]
+    if cors_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=cors_origins,
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
     app.add_exception_handler(ApiError, api_error_handler)
 
     @app.exception_handler(RequestValidationError)

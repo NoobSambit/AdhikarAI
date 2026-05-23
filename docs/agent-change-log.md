@@ -1,5 +1,46 @@
 # AdhikarAI Agent Change Log
 
+## 2026-05-23 10:21 IST - Local E2E Bring-Up
+
+- Request: Bring up AdhikarAI locally with PostgreSQL, Redis if available, FastAPI, Next.js, seeded local data, and core beneficiary/operator/admin workflow verification.
+- Agent: Codex
+- Changed files:
+  - `backend/.env.example`
+  - `backend/app/admin_panel/scheme_drafts.py`
+  - `backend/app/cli/local_e2e.py`
+  - `backend/app/core/config.py`
+  - `backend/app/core/security.py`
+  - `backend/app/dashboard/rbac.py`
+  - `backend/app/main.py`
+  - `backend/tests/unit/test_phase5_rbac.py`
+  - `backend/tests/unit/test_phase5_scheme_drafts.py`
+  - `docs/local-e2e-report.md`
+  - `docs/agent-change-log.md`
+- Cross-layer impact:
+  - Frontend: not impacted
+  - Backend: changed
+  - Database: not impacted
+  - UI/UX: not impacted
+  - Tests: changed
+  - Config/Env: changed
+  - Docs: changed
+- Schema/migration notes: not needed; no schema changes were made. Live local PostgreSQL was migrated through `0005_phase_5`.
+- API contract notes: unchanged; fixes preserve existing request/response contracts and only unblock local CORS/session/audit/draft behavior.
+- Verification:
+  - `uv run --extra test alembic upgrade head` passed against local PostgreSQL.
+  - `uv run --extra test alembic current` passed: `0005_phase_5 (head)`.
+  - `uv run --extra test python -m compileall app` passed.
+  - `uv run --extra test pytest` passed: 55 tests.
+  - `npm run typecheck` passed.
+  - `npm run build` passed; 18 routes generated.
+  - `npm run test:phase4 && node tests/phase5.static.test.mjs` passed.
+  - FastAPI route smoke passed: `/health`, beneficiary typed flow, dashboard operator flow, NGO admin scope checks, and super-admin admin endpoints.
+  - Next route smoke passed: `/`, `/dashboard`, `/admin/quality`, `/manifest.json`.
+  - Redis-backed rate-limit smoke blocked because Redis is not installed/running; `memory://` fallback was verified through a rate-limited dashboard endpoint.
+- Follow-ups:
+  - Install/start local Redis and rerun Redis-backed rate-limit smoke with `REDIS_URL=redis://localhost:6379/0`.
+  - Run real local voice provider smoke once Whisper.cpp, IndicTrans2, and IndicTTS services are installed/running.
+
 ## 2026-05-22 16:52 IST - Post-PRD Stabilization Audit
 
 - Request: Perform a full Phase 1-5 PRD compliance audit, run verification, fix only high-priority issues, and produce a stabilization report.

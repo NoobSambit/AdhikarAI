@@ -46,10 +46,11 @@ async def create_scheme_draft(db: AsyncSession, actor: DashboardActor, payload: 
     validation = await validate_draft_payload(db, actor, payload)
     if validation["errors"]:
         raise ApiError(422, "DRAFT_VALIDATION_FAILED", "Draft has validation errors.", "draft_payload", validation)
-    scheme_id = (payload.get("scheme") or {}).get("id")
+    requested_scheme_id = (payload.get("scheme") or {}).get("id")
+    existing_scheme = await db.get(Scheme, requested_scheme_id) if requested_scheme_id else None
     draft = SchemeDraft(
         organisation_id=actor.organisation_id,
-        scheme_id=scheme_id,
+        scheme_id=requested_scheme_id if existing_scheme and existing_scheme.organisation_id == actor.organisation_id else None,
         draft_payload={**payload, "change_summary": change_summary},
         validation_result=validation,
         status="draft",
@@ -60,7 +61,7 @@ async def create_scheme_draft(db: AsyncSession, actor: DashboardActor, payload: 
     db.add(
         SchemeAuditLog(
             organisation_id=actor.organisation_id,
-            scheme_id=scheme_id,
+            scheme_id=requested_scheme_id if existing_scheme and existing_scheme.organisation_id == actor.organisation_id else None,
             draft_id=draft.id,
             action="create_draft",
             changed_by=actor.member_id,

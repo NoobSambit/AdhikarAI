@@ -3,6 +3,7 @@ from uuid import UUID, uuid4
 import pytest
 
 from app.core.errors import ApiError
+from app.dashboard.audit import add_audit_log
 from app.dashboard.rbac import DashboardActor, ROLE_PERMISSIONS, assert_beneficiary_access, require_actor_permission
 
 
@@ -67,3 +68,25 @@ def test_operator_cannot_publish_schemes():
         require_actor_permission(actor, "scheme:publish")
 
     assert exc.value.code == "PERMISSION_DENIED"
+
+
+def test_audit_log_allows_admin_backed_dashboard_actor_without_user_fk():
+    class FakeSession:
+        def __init__(self):
+            self.row = None
+
+        def add(self, row):
+            self.row = row
+
+    actor = DashboardActor(
+        user_id=None,
+        member_id=uuid4(),
+        organisation_id=ORG_ID,
+        role="operator",
+    )
+    db = FakeSession()
+
+    add_audit_log(db, actor, "beneficiary.create", "beneficiary", str(uuid4()))
+
+    assert db.row.actor_member_id == actor.member_id
+    assert db.row.actor_user_id is None
