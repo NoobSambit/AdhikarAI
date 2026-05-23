@@ -30,7 +30,7 @@ export function DashboardShell({ me, children }: { me?: DashboardMe | null; chil
           <p className="dashboardBrand">AdhikarAI</p>
           <p className="dashboardRole">{me?.display_name ?? "Dashboard"} · {role}</p>
         </div>
-        <nav>
+        <nav aria-label="Dashboard navigation">
           {items.map((item) => {
             const Icon = item.icon;
             return (

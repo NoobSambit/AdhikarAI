@@ -1,5 +1,45 @@
 # AdhikarAI Agent Change Log
 
+## 2026-05-23 11:52 IST - Playwright E2E Regression Suite
+
+- Request: Add repeatable Playwright E2E coverage for verified local beneficiary, operator, NGO admin, super admin, accessibility, and route smoke workflows.
+- Agent: Codex
+- Changed files:
+  - `docs/e2e-testing.md`
+  - `docs/agent-change-log.md`
+  - `frontend/components/dashboard/DashboardShell.tsx`
+  - `frontend/package-lock.json`
+  - `frontend/package.json`
+  - `frontend/playwright.config.ts`
+  - `frontend/tests/e2e/accessibility-smoke.spec.ts`
+  - `frontend/tests/e2e/beneficiary-pwa.spec.ts`
+  - `frontend/tests/e2e/helpers.ts`
+  - `frontend/tests/e2e/ngo-admin.spec.ts`
+  - `frontend/tests/e2e/operator-dashboard.spec.ts`
+  - `frontend/tests/e2e/super-admin.spec.ts`
+- Cross-layer impact:
+  - Frontend: changed
+  - Backend: not impacted
+  - Database: not impacted
+  - UI/UX: changed
+  - Tests: changed
+  - Config/Env: changed
+  - Docs: changed
+- Schema/migration notes: not needed; no persisted schema changes were made.
+- API contract notes: unchanged; tests exercise existing local E2E API contracts and cookie sessions.
+- Verification:
+  - `uv run --extra test alembic upgrade head` passed against local PostgreSQL.
+  - `uv run --extra test python -m app.cli.local_e2e --cookie-dir /tmp/adhikarai-local-e2e` passed and refreshed local E2E metadata/cookies.
+  - `uv run --extra test pytest` passed: 55 tests.
+  - `npm run typecheck` passed.
+  - `npm run build` passed; 18 routes generated.
+  - `npm run test:phase4 && node tests/phase5.static.test.mjs` passed.
+  - `npx playwright install chromium` passed after Playwright reported missing browser binaries.
+  - `npm run test:e2e` passed: 6 Playwright tests.
+  - Route smoke passed: FastAPI `/health` returned 200; Next `/`, `/dashboard`, `/admin/quality`, `/admin/unmatched-queries`, and `/admin/analytics` returned 200.
+- Follow-ups:
+  - Add a real frontend beneficiary detail page when the dashboard detail UI is implemented; current E2E verifies the existing detail API and skips the absent frontend path.
+
 ## 2026-05-23 10:21 IST - Local E2E Bring-Up
 
 - Request: Bring up AdhikarAI locally with PostgreSQL, Redis if available, FastAPI, Next.js, seeded local data, and core beneficiary/operator/admin workflow verification.
