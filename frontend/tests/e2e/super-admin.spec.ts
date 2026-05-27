@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { API_URL, assertBackendReady, useSession } from "./helpers";
+import { API_URL, assertBackendReady, loginAs } from "./helpers";
 
 test.describe("super admin", () => {
-  test.beforeEach(async ({ context }) => {
+  test.beforeEach(async ({ page }) => {
     await assertBackendReady();
-    await useSession(context, "super_admin");
+    await loginAs(page, "super_admin");
   });
 
   test("loads admin pages and previews a scheme draft through the implemented endpoint", async ({ page }) => {

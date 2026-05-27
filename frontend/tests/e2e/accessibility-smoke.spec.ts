@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { assertBackendReady, expectVisibleFocus, readMetadata, useSession } from "./helpers";
+import { assertBackendReady, expectVisibleFocus, loginAs, readMetadata } from "./helpers";
 
 test.describe("accessibility and responsive smoke", () => {
   test("PWA controls have accessible names and work at mobile width", async ({ page }) => {
@@ -14,9 +14,9 @@ test.describe("accessibility and responsive smoke", () => {
     await expectVisibleFocus(page);
   });
 
-  test("dashboard navigation and controls work at desktop and tablet widths", async ({ page, context }) => {
+  test("dashboard navigation and controls work at desktop and tablet widths", async ({ page }) => {
     await assertBackendReady();
-    await useSession(context, "operator");
+    await loginAs(page, "operator");
     const metadata = readMetadata();
 
     await page.setViewportSize({ width: 1280, height: 900 });

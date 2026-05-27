@@ -32,8 +32,8 @@ psql -h localhost -p 5432 -U agent_playground -d postgres -c "GRANT ALL PRIVILEG
 psql -h localhost -p 5432 -U agent_playground -d adhikarai -c "GRANT ALL ON SCHEMA public TO adhikarai; ALTER SCHEMA public OWNER TO adhikarai;"
 uv run --extra test alembic upgrade head
 uv run --extra test alembic current
-uv run --extra test python -m app.cli.local_e2e --cookie-dir /tmp/adhikarai-local-e2e
-uv run --extra test uvicorn app.main:app --host 127.0.0.1 --port 8000
+APP_ENV=local LOCAL_E2E_HELPERS_ENABLED=true uv run --extra test python -m app.cli.local_e2e --cookie-dir /tmp/adhikarai-local-e2e
+APP_ENV=local ENABLE_SCHEDULER=false AUTH_COOKIE_SECURE=false DASHBOARD_AUTH_PROVIDER=dev DASHBOARD_DEV_LOGIN_ENABLED=true DASHBOARD_DEV_LOGIN_CODE=local-e2e-login uv run --extra test uvicorn app.main:app --host 127.0.0.1 --port 8000
 npm run dev -- --hostname 127.0.0.1 --port 3000
 ```
 
@@ -43,6 +43,7 @@ npm run dev -- --hostname 127.0.0.1 --port 3000
   - PostgreSQL: `postgresql+asyncpg://adhikarai:...@localhost:5432/adhikarai`
   - Redis: `memory://` because Redis is unavailable.
   - Auth: local dev JWT secret, insecure cookie disabled for local HTTP.
+  - Dashboard auth: local-only dev provider enabled from shell env; the login code is not written to seed metadata.
   - Providers: mock/local provider settings only; no production credentials.
 - Created `frontend/.env.local`.
   - `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000`
@@ -58,7 +59,7 @@ npm run dev -- --hostname 127.0.0.1 --port 3000
 Seed command:
 
 ```sh
-uv run --extra test python -m app.cli.local_e2e --cookie-dir /tmp/adhikarai-local-e2e
+APP_ENV=local LOCAL_E2E_HELPERS_ENABLED=true uv run --extra test python -m app.cli.local_e2e --cookie-dir /tmp/adhikarai-local-e2e
 ```
 
 Created or reused:
@@ -67,11 +68,11 @@ Created or reused:
 - Other local NGO organisation: `00000000-0000-0000-0000-000000000002`
 - Central sample schemes and eligibility rules from `backend/app/seeds/central_schemes.v1.json`
 - Dashboard members:
-  - operator
-  - second operator for denial checks
-  - NGO admin
-  - super admin
-  - other-org operator
+  - operator: `operator.local@example.test`
+  - second operator for denial checks: `operator2.local@example.test`
+  - NGO admin: `ngo-admin.local@example.test`
+  - super admin: `super-admin.local@example.test`
+  - other-org operator: `other-operator.local@example.test`
 - Beneficiaries:
   - assigned beneficiary for the operator
   - unassigned beneficiary assigned to the second operator
@@ -84,6 +85,8 @@ Created or reused:
   - `/tmp/adhikarai-local-e2e/super_admin.cookie`
   - `/tmp/adhikarai-local-e2e/beneficiary.cookie`
 
+The metadata file includes seeded member emails and IDs for UI login. It does not include the dashboard login code.
+
 No Aadhaar numbers or raw documents were stored.
 
 ## Workflows Tested
@@ -94,7 +97,7 @@ No Aadhaar numbers or raw documents were stored.
 | CORS preflight from local Next | pass | `OPTIONS /agent/sessions` with `Origin: http://localhost:3000` returned 200 and `access-control-allow-origin`. |
 | Beneficiary typed PWA flow | pass | `POST /agent/sessions` then `POST /agent/message` returned a result with an eligible scheme. |
 | Beneficiary save/checklist/status | pass | Authenticated `POST /saved-schemes`, `PATCH /checklists`, and `PATCH /application-status` returned 200. |
-| Operator dashboard session | pass | `GET /dashboard/me` returned operator role and permissions. |
+| Operator dashboard session | pass | UI login through `/dashboard/login` set an httpOnly cookie; `GET /dashboard/me` returned operator role and permissions. |
 | Operator create beneficiary | pass after fix | `POST /dashboard/beneficiaries` returned 201-equivalent JSON body after audit FK fix. |
 | Operator list/search/detail | pass | `GET /dashboard/beneficiaries?q=Operator%20Created` and detail route returned 200. |
 | Operator add note | pass | `POST /dashboard/beneficiaries/{id}/notes` returned 200. |
@@ -147,6 +150,7 @@ Results:
 2. Added a local-only E2E seed/session helper at `backend/app/cli/local_e2e.py`.
 3. Fixed dashboard audit logs so admin-backed dashboard actors do not write `admin_user_id` into the `audit_logs.actor_user_id` foreign key.
 4. Fixed new scheme-draft creation so drafts for not-yet-created schemes keep the desired scheme id in payload but do not set the nullable `scheme_drafts.scheme_id` FK until the scheme exists.
+5. Added local-only dashboard dev login and production/staging config validation; deployed environments reject dev dashboard login and `memory://` Redis.
 
 ## Known Blockers
 

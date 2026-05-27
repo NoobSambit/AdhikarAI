@@ -4,15 +4,28 @@ import assert from "node:assert/strict";
 const api = readFileSync(new URL("../lib/api.ts", import.meta.url), "utf8");
 const dashboard = readFileSync(new URL("../app/dashboard/page.tsx", import.meta.url), "utf8");
 const dashboardLayout = readFileSync(new URL("../app/dashboard/layout.tsx", import.meta.url), "utf8");
+const dashboardLogin = readFileSync(new URL("../app/dashboard/login/page.tsx", import.meta.url), "utf8");
+const dashboardShell = readFileSync(new URL("../components/dashboard/DashboardShell.tsx", import.meta.url), "utf8");
 const beneficiaryDetail = readFileSync(new URL("../app/dashboard/beneficiaries/[id]/page.tsx", import.meta.url), "utf8");
 const beneficiaryDetailClient = readFileSync(new URL("../app/dashboard/beneficiaries/[id]/BeneficiaryDetailClient.tsx", import.meta.url), "utf8");
+const adminLayout = readFileSync(new URL("../app/admin/layout.tsx", import.meta.url), "utf8");
 const adminQuality = readFileSync(new URL("../app/admin/quality/page.tsx", import.meta.url), "utf8");
+const devChat = readFileSync(new URL("../app/dev-chat/page.tsx", import.meta.url), "utf8");
+const devVoice = readFileSync(new URL("../app/dev-voice/page.tsx", import.meta.url), "utf8");
 
 assert.ok(existsSync(new URL("../app/page.tsx", import.meta.url)), "beneficiary PWA route must remain present");
 assert.match(api, /DashboardRole/, "dashboard role types should be shared in API client");
+assert.match(api, /dashboardLogin/, "API client should expose dashboard login");
+assert.match(api, /dashboardLogout/, "API client should expose dashboard logout");
 assert.match(api, /credentials: "include"/, "dashboard must use httpOnly cookie session");
 assert.doesNotMatch(api, /localStorage\.setItem\(["'].*token/i, "JWT must not be stored in localStorage");
+assert.doesNotMatch(api, /sessionStorage\.setItem\(["'].*token/i, "JWT must not be stored in sessionStorage");
 assert.match(dashboardLayout, /DashboardShell/, "dashboard should use the operator shell");
+assert.match(adminLayout, /DashboardShell/, "admin pages should use the authenticated dashboard shell");
+assert.match(dashboardLogin, /Email/, "dashboard login should have an email field");
+assert.match(dashboardLogin, /Access code/, "dashboard login should have an access code field");
+assert.match(dashboardShell, /dashboardLogout/, "dashboard shell should expose logout");
+assert.match(dashboardShell, /dashboard\/login\?next=/, "dashboard shell should redirect unauthenticated users to login");
 assert.match(dashboard, /Follow-ups due/, "dashboard home should prioritize follow-ups");
 assert.match(dashboard, /role === "operator"/, "dashboard navigation should react to role");
 assert.ok(existsSync(new URL("../app/dashboard/beneficiaries/[id]/page.tsx", import.meta.url)), "beneficiary detail route must exist");
@@ -21,5 +34,7 @@ assert.match(beneficiaryDetailClient, /getDashboardBeneficiary/, "beneficiary de
 assert.match(beneficiaryDetailClient, /BENEFICIARY_NOT_ASSIGNED|ORG_SCOPE_DENIED/, "beneficiary detail route should handle backend access errors");
 assert.match(beneficiaryDetailClient, /maxLength=\{5000\}/, "beneficiary detail note input should enforce the PRD note limit");
 assert.match(adminQuality, /markQualityFlagReviewed/, "quality page should expose review workflow");
+assert.match(devChat, /notFound/, "dev chat route should be gated outside local dev tools");
+assert.match(devVoice, /notFound/, "dev voice route should be gated outside local dev tools");
 
 console.log("Phase 5 frontend static checks passed");

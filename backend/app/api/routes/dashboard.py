@@ -1,14 +1,19 @@
+import hmac
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Query, Response, UploadFile
 from fastapi.responses import StreamingResponse
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
+from app.core.errors import ApiError
 from app.core.security import require_dashboard_actor
+from app.core.security import clear_auth_cookie, create_dashboard_session_jwt, set_auth_cookie
 from app.dashboard import beneficiaries
 from app.dashboard.bulk_eligibility import parse_beneficiary_csv
 from app.dashboard.rbac import DashboardActor
-from app.db.models import BulkEligibilityJob, BulkEligibilityRow, OperatorNotification
+from app.db.models import BulkEligibilityJob, BulkEligibilityRow, OperatorNotification, OrganisationMember
 from app.db.session import get_db
 from app.rate_limit.service import check_operator_limit
 from app.schemas.phase5 import (
@@ -21,6 +26,8 @@ from app.schemas.phase5 import (
     BulkJobStatusResponse,
     CreateBeneficiaryRequest,
     DashboardMeResponse,
+    DashboardLoginRequest,
+    DashboardLoginResponse,
     EligibilityRunRequest,
     EligibilityRunResponse,
     FollowupRequest,
@@ -31,8 +38,7 @@ from app.schemas.phase5 import (
 router = APIRouter(prefix="/dashboard")
 
 
-@router.get("/me", response_model=DashboardMeResponse)
-async def dashboard_me(actor: DashboardActor = Depends(require_dashboard_actor)) -> DashboardMeResponse:
+def _dashboard_me(actor: DashboardActor) -> DashboardMeResponse:
     return DashboardMeResponse(
         member_id=actor.member_id,
         organisation_id=actor.organisation_id,
@@ -40,6 +46,62 @@ async def dashboard_me(actor: DashboardActor = Depends(require_dashboard_actor))
         display_name=actor.display_name,
         permissions=sorted(actor.permissions),
     )
+
+
+def _assert_dev_dashboard_login_enabled(login_code: str) -> None:
+    settings = get_settings()
+    if settings.dashboard_auth_provider == "disabled":
+        raise ApiError(503, "DASHBOARD_AUTH_NOT_CONFIGURED", "Dashboard login is not configured.", "dashboard_auth_provider")
+    if (
+        not settings.is_local_like_env
+        or settings.dashboard_auth_provider != "dev"
+        or not settings.dashboard_dev_login_enabled
+        or not settings.dashboard_dev_login_code
+    ):
+        raise ApiError(403, "DASHBOARD_DEV_LOGIN_DISABLED", "Dev dashboard login is disabled.", "dashboard_auth_provider")
+    if not hmac.compare_digest(login_code, settings.dashboard_dev_login_code):
+        raise ApiError(401, "DASHBOARD_INVALID_CREDENTIALS", "Email or code is not correct.", "login_code")
+
+
+@router.post("/auth/login", response_model=DashboardLoginResponse)
+async def dashboard_login(request: DashboardLoginRequest, response: Response, db: AsyncSession = Depends(get_db)) -> DashboardLoginResponse:
+    _assert_dev_dashboard_login_enabled(request.login_code)
+    email = request.email.strip().lower()
+    rows = (
+        await db.scalars(
+            select(OrganisationMember).where(
+                func.lower(OrganisationMember.email) == email,
+                OrganisationMember.is_active.is_(True),
+            )
+        )
+    ).all()
+    if not rows:
+        raise ApiError(401, "DASHBOARD_INVALID_CREDENTIALS", "Email or code is not correct.", "email")
+    if len(rows) > 1:
+        raise ApiError(400, "DASHBOARD_MEMBER_AMBIGUOUS", "Multiple active dashboard members use this email.", "email")
+
+    member = rows[0]
+    actor = DashboardActor(
+        user_id=member.user_id,
+        member_id=member.id,
+        organisation_id=member.organisation_id,
+        role=member.role,
+        display_name=member.display_name,
+    )
+    settings = get_settings()
+    set_auth_cookie(response, create_dashboard_session_jwt(member), settings.dashboard_session_idle_timeout_seconds)
+    return DashboardLoginResponse(actor=_dashboard_me(actor))
+
+
+@router.post("/auth/logout")
+async def dashboard_logout(response: Response) -> dict[str, bool]:
+    clear_auth_cookie(response)
+    return {"logged_out": True}
+
+
+@router.get("/me", response_model=DashboardMeResponse)
+async def dashboard_me(actor: DashboardActor = Depends(require_dashboard_actor)) -> DashboardMeResponse:
+    return _dashboard_me(actor)
 
 
 @router.get("/beneficiaries", response_model=BeneficiaryListResponse)

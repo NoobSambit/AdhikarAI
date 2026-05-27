@@ -1,5 +1,68 @@
 # AdhikarAI Agent Change Log
 
+## 2026-05-27 10:59 IST - Dashboard Auth and Deployment Hardening
+
+- Request: Add local/dev dashboard login, harden cookie sessions, gate dev helpers, validate deployed env settings, update E2E to use UI login, and document deployment readiness.
+- Agent: Codex
+- Changed files:
+  - `backend/.env.example`
+  - `backend/app/api/routes/admin_panel.py`
+  - `backend/app/api/routes/dashboard.py`
+  - `backend/app/api/routes/phase4.py`
+  - `backend/app/cli/local_e2e.py`
+  - `backend/app/core/config.py`
+  - `backend/app/core/security.py`
+  - `backend/app/schemas/phase5.py`
+  - `backend/tests/unit/test_config_validation.py`
+  - `backend/tests/unit/test_dashboard_auth.py`
+  - `backend/tests/unit/test_phase5_rate_limit.py`
+  - `docs/deployment-readiness.md`
+  - `docs/e2e-testing.md`
+  - `docs/local-e2e-report.md`
+  - `frontend/app/admin/layout.tsx`
+  - `frontend/app/dashboard/login/page.tsx`
+  - `frontend/app/dev-chat/page.tsx`
+  - `frontend/app/dev-voice/page.tsx`
+  - `frontend/app/styles.css`
+  - `frontend/components/dashboard/DashboardShell.tsx`
+  - `frontend/lib/api.ts`
+  - `frontend/playwright.config.ts`
+  - `frontend/tests/e2e/accessibility-smoke.spec.ts`
+  - `frontend/tests/e2e/helpers.ts`
+  - `frontend/tests/e2e/ngo-admin.spec.ts`
+  - `frontend/tests/e2e/operator-dashboard.spec.ts`
+  - `frontend/tests/e2e/super-admin.spec.ts`
+  - `frontend/tests/phase5.static.test.mjs`
+- Cross-layer impact:
+  - Frontend: changed
+  - Backend: changed
+  - Database: not impacted
+  - UI/UX: changed
+  - Tests: changed
+  - Config/Env: changed
+  - Docs: changed
+- Schema/migration notes: not needed; dashboard login reuses existing `organisation_members` fields and no persistence schema changed.
+- API contract notes: changed; added `/dashboard/auth/login` and `/dashboard/auth/logout`, kept JWTs in httpOnly cookies only, and secured `/admin/schemes/{scheme_id}/history`.
+- Verification:
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run --extra test python -m compileall app` passed.
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run --extra test python -c "from app.main import create_app; app=create_app(); print(app.title, app.version, len(app.routes))"` passed: `AdhikarAI API phase-4 73`.
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run --extra test pytest` passed: 76 tests.
+  - `npm run typecheck` passed.
+  - `npm run build` passed; 19 routes generated including `/dashboard/login`.
+  - `npm run test:phase4` passed.
+  - `node tests/phase5.static.test.mjs` passed.
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run --extra test alembic upgrade head` passed against local PostgreSQL.
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run --extra test alembic heads` passed: `0005_phase_5 (head)`.
+  - `UV_CACHE_DIR=/tmp/uv-cache uv run --extra test alembic current` passed: `0005_phase_5 (head)`.
+  - `APP_ENV=local LOCAL_E2E_HELPERS_ENABLED=true uv run --extra test python -m app.cli.local_e2e --cookie-dir /tmp/adhikarai-local-e2e` passed and refreshed local fixture metadata.
+  - `redis-cli -u redis://localhost:6379/0 ping` passed: `PONG`; Redis-compatible `valkey` was installed through `pacman`.
+  - `REDIS_URL=redis://localhost:6379/0 uv run --extra test pytest tests/unit/test_phase5_rate_limit.py` passed: 3 tests.
+  - `redis-cli -u redis://localhost:6379/0 --scan --pattern 'rate:*'` found rate-limit keys for guest/user/operator paths.
+  - `E2E_DASHBOARD_LOGIN_CODE=local-e2e-login E2E_API_URL=http://127.0.0.1:8000 npm run test:e2e` passed: 6 Playwright tests.
+  - `git diff --check` passed.
+- Follow-ups:
+  - Add a production-grade dashboard identity provider before enabling dashboard login in staging/production.
+
 ## 2026-05-23 12:12 IST - Beneficiary Detail Dashboard Route
 
 - Request: Implement the missing Phase 5 frontend beneficiary detail route and make Playwright E2E always cover it.

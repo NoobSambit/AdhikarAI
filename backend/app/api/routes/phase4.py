@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.core.security import create_session_jwt, require_user
+from app.core.security import create_session_jwt, require_user, set_auth_cookie
 from app.db.models import User
 from app.db.session import get_db
 from app.schemas.phase4 import (
@@ -59,15 +59,7 @@ async def post_send_otp(request: SendOtpRequest, db: AsyncSession = Depends(get_
 async def post_verify_otp(request: VerifyOtpRequest, response: Response, db: AsyncSession = Depends(get_db)) -> VerifyOtpResponse:
     user, migrated = await phase4.verify_otp(request, db)
     settings = get_settings()
-    response.set_cookie(
-        settings.auth_cookie_name,
-        create_session_jwt(user),
-        max_age=settings.auth_jwt_ttl_seconds,
-        httponly=True,
-        secure=settings.auth_cookie_secure,
-        samesite="lax",
-        path="/",
-    )
+    set_auth_cookie(response, create_session_jwt(user), settings.auth_jwt_ttl_seconds)
     return VerifyOtpResponse(user=_auth_user(user), migrated_guest_profile=migrated)
 
 

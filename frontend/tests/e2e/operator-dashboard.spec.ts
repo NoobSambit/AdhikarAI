@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { API_URL, assertBackendReady, expectVisibleFocus, readMetadata, useSession } from "./helpers";
+import { API_URL, assertBackendReady, expectVisibleFocus, loginAs, readMetadata } from "./helpers";
 
 test.describe("operator dashboard", () => {
-  test.beforeEach(async ({ context }) => {
+  test.beforeEach(async ({ page }) => {
     await assertBackendReady();
-    await useSession(context, "operator");
+    await loginAs(page, "operator");
   });
 
   test("loads beneficiary list, creates and searches beneficiary, and verifies operator workflows", async ({ page }) => {
@@ -89,5 +89,10 @@ test.describe("operator dashboard", () => {
     await page.goto("/dashboard");
     await page.keyboard.press("Tab");
     await expectVisibleFocus(page);
+
+    await page.getByRole("button", { name: "Sign out" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/login/);
+    const meResponse = await page.request.get(`${API_URL}/dashboard/me`);
+    expect(meResponse.status()).toBe(401);
   });
 });

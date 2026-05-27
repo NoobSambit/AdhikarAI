@@ -620,7 +620,8 @@ html[data-font-size="extra_large"] body {
 
 .dashboardNavLink,
 .primaryButton,
-.secondaryButton {
+.secondaryButton,
+.dashboardLogout {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
@@ -637,6 +638,7 @@ html[data-font-size="extra_large"] body {
 .dashboardNavLink:focus-visible,
 .primaryButton:focus-visible,
 .secondaryButton:focus-visible,
+.dashboardLogout:focus-visible,
 .searchBox input:focus-visible,
 .denseForm input:focus-visible,
 .kanbanCard select:focus-visible,
@@ -649,12 +651,27 @@ html[data-font-size="extra_large"] body {
 }
 
 .dashboardNotice {
-  margin-top: auto;
   display: flex;
   align-items: center;
   gap: 8px;
   color: #475569;
   font-size: 13px;
+}
+
+.dashboardLogout {
+  margin-top: auto;
+  justify-content: center;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dashboardLogout:disabled {
+  cursor: wait;
+  opacity: 0.75;
 }
 
 .dashboardMain {
@@ -874,6 +891,33 @@ html[data-font-size="extra_large"] body {
 .dashboardError {
   color: #991b1b;
   font-weight: 700;
+}
+
+.dashboardLoginPage {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: #f6f8fb;
+}
+
+.dashboardLoginPanel {
+  width: min(100%, 420px);
+  display: grid;
+  gap: 16px;
+  border: 1px solid #d7dde8;
+  border-radius: 8px;
+  padding: 20px;
+  background: #ffffff;
+}
+
+.dashboardLoginPanel h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.dashboardLoginPanel .denseForm {
+  grid-template-columns: 1fr;
 }
 
 .kanbanGrid {

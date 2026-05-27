@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -74,6 +74,8 @@ class Settings(BaseSettings):
     auth_jwt_secret: str = "change-me-phase-4"
     auth_cookie_secure: bool = True
     auth_cookie_name: str = "adhikarai_session"
+    auth_cookie_samesite: str = "lax"
+    auth_cookie_domain: str | None = None
     auth_jwt_ttl_seconds: int = 2_592_000
     otp_provider: str = "mock"
     otp_expiry_seconds: int = 300
@@ -86,6 +88,11 @@ class Settings(BaseSettings):
     vapid_private_key: str | None = None
     dashboard_enabled: bool = True
     dashboard_session_idle_timeout_seconds: int = 3600
+    dashboard_auth_provider: str = "disabled"
+    dashboard_dev_login_enabled: bool = False
+    dashboard_dev_login_code: str = ""
+    local_e2e_helpers_enabled: bool = False
+    allow_mock_otp_in_staging: bool = False
     rate_limit_user_per_day: int = 100
     rate_limit_operator_per_day: int = 1000
     rate_limit_guest_per_day: int = 50
@@ -97,6 +104,72 @@ class Settings(BaseSettings):
     msg91_sms_template_id: str | None = None
     quality_monitor_cron: str = "0 * * * *"
     scheme_expiry_warning_days: int = 30
+
+    @property
+    def is_deployed_env(self) -> bool:
+        return self.app_env.lower() in {"staging", "production"}
+
+    @property
+    def is_local_like_env(self) -> bool:
+        return self.app_env.lower() in {"local", "dev", "test"}
+
+    @model_validator(mode="after")
+    def validate_environment(self) -> "Settings":
+        env = self.app_env.lower()
+        samesite = self.auth_cookie_samesite.lower()
+        if samesite not in {"lax", "strict", "none"}:
+            raise ValueError("AUTH_COOKIE_SAMESITE must be one of lax, strict, or none.")
+        self.auth_cookie_samesite = samesite
+        if samesite == "none" and not self.auth_cookie_secure:
+            raise ValueError("AUTH_COOKIE_SECURE must be true when AUTH_COOKIE_SAMESITE=none.")
+
+        dashboard_provider = self.dashboard_auth_provider.lower()
+        if dashboard_provider not in {"disabled", "dev"}:
+            raise ValueError("DASHBOARD_AUTH_PROVIDER must be disabled or dev.")
+        self.dashboard_auth_provider = dashboard_provider
+
+        if not self.is_deployed_env:
+            return self
+
+        default_db = "postgresql+asyncpg://adhikarai:adhikarai@localhost:5432/adhikarai"
+        cors_origins = [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        default_secrets = {"", "change-me", "change-me-phase-4"}
+
+        if self.auth_jwt_secret in default_secrets or len(self.auth_jwt_secret) < 32:
+            raise ValueError("AUTH_JWT_SECRET must be a non-default value at least 32 characters long.")
+        if not self.auth_cookie_secure:
+            raise ValueError("AUTH_COOKIE_SECURE must be true in staging/production.")
+        if not self.database_url or self.database_url == default_db:
+            raise ValueError("DATABASE_URL must be a deployed database URL in staging/production.")
+        if not self.database_direct_url or self.database_direct_url == default_db:
+            raise ValueError("DATABASE_DIRECT_URL must be a deployed database URL in staging/production.")
+        if not self.redis_url or self.redis_url == "memory://" or not self.redis_url.startswith(("redis://", "rediss://")):
+            raise ValueError("REDIS_URL must be redis:// or rediss:// in staging/production.")
+        if self.admin_api_token in default_secrets:
+            raise ValueError("ADMIN_API_TOKEN must be changed in staging/production.")
+        if self.dashboard_dev_login_enabled or self.dashboard_auth_provider == "dev":
+            raise ValueError("Dev dashboard login is not allowed in staging/production.")
+        if not cors_origins or "*" in cors_origins:
+            raise ValueError("CORS_ORIGINS must list explicit origins in staging/production.")
+        if env == "production" and any("localhost" in origin or "127.0.0.1" in origin for origin in cors_origins):
+            raise ValueError("Production CORS_ORIGINS cannot include localhost.")
+        if env == "production" and self.otp_provider == "mock":
+            raise ValueError("OTP_PROVIDER=mock is not allowed in production.")
+        if env == "staging" and self.otp_provider == "mock" and not self.allow_mock_otp_in_staging:
+            raise ValueError("Set ALLOW_MOCK_OTP_IN_STAGING=true to use mock OTP in staging.")
+        if env == "production" and self.store_audio_debug:
+            raise ValueError("STORE_AUDIO_DEBUG must be false in production.")
+        if self.otp_provider == "msg91" and (not self.msg91_auth_key or not self.msg91_template_id):
+            raise ValueError("MSG91_AUTH_KEY and MSG91_TEMPLATE_ID are required when OTP_PROVIDER=msg91.")
+        if (self.llm_provider == "groq" or self.voice_provider == "groq") and not self.groq_api_key:
+            raise ValueError("GROQ_API_KEY is required when Groq providers are enabled.")
+        if self.translation_provider == "ai4bharat_hosted" and (not self.ai4bharat_translate_url or not self.ai4bharat_api_key):
+            raise ValueError("AI4BHARAT_TRANSLATE_URL and AI4BHARAT_API_KEY are required for hosted AI4Bharat.")
+        if self.translation_provider == "google" and not self.google_translate_api_key:
+            raise ValueError("GOOGLE_TRANSLATE_API_KEY is required when TRANSLATION_PROVIDER=google.")
+        if self.tts_provider == "google" and not self.google_application_credentials:
+            raise ValueError("GOOGLE_APPLICATION_CREDENTIALS is required when TTS_PROVIDER=google.")
+        return self
 
     @property
     def groq_transcriptions_url(self) -> str:

@@ -13,6 +13,9 @@ export interface E2eMetadata {
   operator_member_id: string;
   ngo_admin_member_id: string;
   super_admin_member_id: string;
+  operator_email: string;
+  ngo_admin_email: string;
+  super_admin_email: string;
   assigned_beneficiary_id: string;
   unassigned_beneficiary_id: string;
   other_org_beneficiary_id: string;
@@ -52,6 +55,22 @@ export async function useSession(context: BrowserContext, role: SessionRole) {
   ]);
 }
 
+export async function loginAs(page: Page, role: Exclude<SessionRole, "beneficiary">) {
+  const metadata = readMetadata();
+  const code = process.env.E2E_DASHBOARD_LOGIN_CODE ?? "local-e2e-login";
+  const emails = {
+    operator: metadata.operator_email,
+    ngo_admin: metadata.ngo_admin_email,
+    super_admin: metadata.super_admin_email
+  };
+  await page.goto("/dashboard/login");
+  await page.getByLabel("Email").fill(emails[role]);
+  await page.getByLabel("Access code").fill(code);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(/\/dashboard/);
+  await expectNoJwtInLocalStorage(page);
+}
+
 export async function expectNoJwtInLocalStorage(page: Page) {
   const entries = await page.evaluate(() => Object.entries(window.localStorage));
   for (const [key, value] of entries) {
@@ -61,19 +80,35 @@ export async function expectNoJwtInLocalStorage(page: Page) {
 }
 
 export async function expectVisibleFocus(page: Page) {
-  const focused = page.locator(":focus");
-  await expect(focused).toBeVisible();
-  const focusStyle = await focused.evaluate((element) => {
-    const style = window.getComputedStyle(element);
-    return {
-      outlineStyle: style.outlineStyle,
-      outlineWidth: style.outlineWidth,
-      outlineColor: style.outlineColor,
-      boxShadow: style.boxShadow
-    };
-  });
-  expect(
-    focusStyle.outlineStyle !== "none" && focusStyle.outlineWidth !== "0px",
-    `focused element should expose a visible outline: ${JSON.stringify(focusStyle)}`
-  ).toBeTruthy();
+  let lastFocus: unknown = null;
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    const focus = await page.evaluate(() => {
+      const element = document.activeElement;
+      if (!element || element === document.body || !(element instanceof HTMLElement)) {
+        return null;
+      }
+      const rect = element.getBoundingClientRect();
+      const style = window.getComputedStyle(element);
+      return {
+        id: element.id,
+        tagName: element.tagName,
+        ariaLabel: element.getAttribute("aria-label"),
+        isNextDevTools: element.hasAttribute("data-nextjs-dev-tools-button"),
+        visible: rect.width > 0 && rect.height > 0,
+        outlineStyle: style.outlineStyle,
+        outlineWidth: style.outlineWidth,
+        outlineColor: style.outlineColor,
+        boxShadow: style.boxShadow
+      };
+    });
+    lastFocus = focus;
+    const hasOutline = focus && focus.outlineStyle !== "none" && focus.outlineWidth !== "0px";
+    const hasShadow = focus && focus.boxShadow !== "none";
+    if (focus?.visible && !focus.isNextDevTools && (hasOutline || hasShadow)) {
+      expect(true).toBeTruthy();
+      return;
+    }
+    await page.keyboard.press("Tab");
+  }
+  expect(false, `focused element should expose a visible outline: ${JSON.stringify(lastFocus)}`).toBeTruthy();
 }

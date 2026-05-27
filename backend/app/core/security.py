@@ -6,7 +6,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from fastapi import Cookie, Depends, Header
+from fastapi import Cookie, Depends, Header, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
@@ -67,9 +67,35 @@ def create_dashboard_session_jwt(member: OrganisationMember) -> str:
         "role": member.role,
         "typ": "dashboard",
         "iat": int(now.timestamp()),
-        "exp": int((now + timedelta(seconds=settings.auth_jwt_ttl_seconds)).timestamp()),
+        "exp": int((now + timedelta(seconds=settings.dashboard_session_idle_timeout_seconds)).timestamp()),
     }
     return _sign_payload(payload)
+
+
+def set_auth_cookie(response: Response, token: str, max_age: int) -> None:
+    settings = get_settings()
+    response.set_cookie(
+        settings.auth_cookie_name,
+        token,
+        max_age=max_age,
+        httponly=True,
+        secure=settings.auth_cookie_secure,
+        samesite=settings.auth_cookie_samesite,
+        domain=settings.auth_cookie_domain,
+        path="/",
+    )
+
+
+def clear_auth_cookie(response: Response) -> None:
+    settings = get_settings()
+    response.delete_cookie(
+        settings.auth_cookie_name,
+        httponly=True,
+        secure=settings.auth_cookie_secure,
+        samesite=settings.auth_cookie_samesite,
+        domain=settings.auth_cookie_domain,
+        path="/",
+    )
 
 
 def decode_session_jwt(token: str) -> dict:

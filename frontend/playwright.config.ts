@@ -27,7 +27,8 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     env: {
-      NEXT_PUBLIC_API_BASE_URL: process.env.E2E_API_URL ?? "http://127.0.0.1:8000"
+      NEXT_PUBLIC_API_BASE_URL: process.env.E2E_API_URL ?? "http://127.0.0.1:8000",
+      NEXT_PUBLIC_ENABLE_DEV_TOOLS: "true"
     }
   }
 });

@@ -16,6 +16,15 @@ class DashboardMeResponse(BaseModel):
     permissions: list[str]
 
 
+class DashboardLoginRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=254)
+    login_code: str = Field(min_length=1, max_length=200)
+
+
+class DashboardLoginResponse(BaseModel):
+    actor: DashboardMeResponse
+
+
 class CreateBeneficiaryRequest(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     phone_e164: str | None = None

@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
-import { API_URL, assertBackendReady, readMetadata, useSession } from "./helpers";
+import { API_URL, assertBackendReady, loginAs, readMetadata } from "./helpers";
 
 test.describe("NGO admin dashboard", () => {
-  test.beforeEach(async ({ context }) => {
+  test.beforeEach(async ({ page }) => {
     await assertBackendReady();
-    await useSession(context, "ngo_admin");
+    await loginAs(page, "ngo_admin");
   });
 
   test("loads organisation-scoped beneficiary list and denies cross-org detail", async ({ page }) => {

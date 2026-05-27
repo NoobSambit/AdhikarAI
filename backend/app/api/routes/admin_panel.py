@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.admin_panel.queries import analytics, list_quality_flags, review_quality_flag, unmatched_query_groups
 from app.admin_panel.scheme_drafts import create_scheme_draft, preview_scheme_draft, publish_scheme_draft
 from app.core.security import require_dashboard_actor
-from app.dashboard.rbac import DashboardActor
+from app.dashboard.rbac import DashboardActor, require_actor_permission
 from app.db.session import get_db
 from app.schemas.phase5 import ReviewQualityFlagRequest, SchemeDraftRequest
 
@@ -44,7 +44,8 @@ async def publish_draft(draft_id: UUID, actor: DashboardActor = Depends(require_
 
 
 @router.get("/schemes/{scheme_id}/history")
-async def scheme_history(scheme_id: str):
+async def scheme_history(scheme_id: str, actor: DashboardActor = Depends(require_dashboard_actor)):
+    require_actor_permission(actor, "scheme:read")
     return {"items": [], "scheme_id": scheme_id}
 
 

@@ -86,6 +86,10 @@ export interface DashboardMe {
   permissions: string[];
 }
 
+export interface DashboardLoginResponse {
+  actor: DashboardMe;
+}
+
 export interface DashboardBeneficiary {
   id: string;
   name: string;
@@ -277,6 +281,17 @@ export function resolveAudioUrl(audioUrl: string) {
 
 export async function getDashboardMe() {
   return jsonFetch<DashboardMe>("/dashboard/me");
+}
+
+export async function dashboardLogin(email: string, loginCode: string) {
+  return jsonFetch<DashboardLoginResponse>("/dashboard/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, login_code: loginCode })
+  });
+}
+
+export async function dashboardLogout() {
+  return jsonFetch<{ logged_out: boolean }>("/dashboard/auth/logout", { method: "POST" });
 }
 
 export async function listDashboardBeneficiaries(params: Record<string, string> = {}) {

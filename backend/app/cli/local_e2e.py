@@ -33,6 +33,12 @@ from app.services.seeds import PUBLIC_ORG_ID, seed_central_schemes
 OTHER_ORG_ID = UUID("00000000-0000-0000-0000-000000000002")
 
 
+def assert_local_e2e_enabled() -> None:
+    settings = get_settings()
+    if not settings.is_local_like_env or not settings.local_e2e_helpers_enabled:
+        raise SystemExit("Local E2E helpers require APP_ENV=local/dev/test and LOCAL_E2E_HELPERS_ENABLED=true.")
+
+
 async def _get_or_create_org(db: AsyncSession, org_id: UUID, slug: str, name: str) -> Organisation:
     org = await db.get(Organisation, org_id)
     if org is None:
@@ -168,6 +174,11 @@ async def _get_or_create_beneficiary(
                 reason="Collect bank passbook copy",
             )
         )
+    else:
+        followup.assigned_operator_id = operator_id
+        followup.due_date = date.today()
+        followup.reason = "Collect bank passbook copy"
+        followup.status = "open"
     return beneficiary, user
 
 
@@ -215,6 +226,7 @@ def _write_cookie(path: Path, token: str, cookie_name: str) -> None:
 
 
 async def seed(cookie_dir: Path) -> dict[str, str]:
+    assert_local_e2e_enabled()
     settings = get_settings()
     async with AsyncSessionLocal() as db:
         await seed_central_schemes(db)
@@ -249,6 +261,9 @@ async def seed(cookie_dir: Path) -> dict[str, str]:
             "operator_member_id": str(operator.id),
             "ngo_admin_member_id": str(ngo_admin.id),
             "super_admin_member_id": str(super_admin.id),
+            "operator_email": operator.email or "",
+            "ngo_admin_email": ngo_admin.email or "",
+            "super_admin_email": super_admin.email or "",
             "assigned_beneficiary_id": str(assigned.id),
             "unassigned_beneficiary_id": str(unassigned.id),
             "other_org_beneficiary_id": str(other_org.id),

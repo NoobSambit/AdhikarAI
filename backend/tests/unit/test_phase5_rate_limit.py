@@ -58,3 +58,22 @@ async def test_rate_limit_uses_redis_counter_when_configured(monkeypatch):
 
     assert exc.value.code == "RATE_LIMIT_EXCEEDED"
     get_settings.cache_clear()
+
+
+def test_memory_redis_rejected_in_deployed_env():
+    from app.core.config import Settings
+
+    with pytest.raises(ValueError):
+        Settings(
+            app_env="production",
+            auth_jwt_secret="production-secret-with-more-than-32-chars",
+            auth_cookie_secure=True,
+            database_url="postgresql+asyncpg://prod:prod@db.example.test:5432/adhikarai",
+            database_direct_url="postgresql+asyncpg://prod:prod@db.example.test:5432/adhikarai",
+            redis_url="memory://",
+            admin_api_token="prod-admin-token",
+            otp_provider="msg91",
+            msg91_auth_key="msg91-key",
+            msg91_template_id="template",
+            cors_origins="https://adhikarai.example.test",
+        )
