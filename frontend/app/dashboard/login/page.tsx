@@ -60,14 +60,14 @@ export default function DashboardLoginPage() {
         <form className="denseForm" onSubmit={submit}>
           <label>
             Email
-            <input type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} required />
+            <input type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} required disabled={submitting} />
           </label>
           <label>
             Access code
-            <input type="password" autoComplete="current-password" value={loginCode} onChange={(event) => setLoginCode(event.target.value)} required />
+            <input type="password" autoComplete="current-password" value={loginCode} onChange={(event) => setLoginCode(event.target.value)} required disabled={submitting} />
           </label>
-          <button className="primaryButton" type="submit" disabled={submitting}>
-            {submitting ? "Signing in..." : "Sign in"}
+          <button className="primaryButton" type="submit" disabled={submitting} style={{ justifyContent: 'center' }}>
+            {submitting ? <><span className="spinner" /> Signing in...</> : "Sign in"}
           </button>
         </form>
       </section>

@@ -200,31 +200,36 @@ export function BeneficiaryDetailClient({ beneficiaryId }: { beneficiaryId: stri
           <ListChecks size={18} aria-hidden="true" />
           <h2 id="statuses-heading">Application statuses</h2>
         </div>
-        <table className="denseTable">
-          <thead><tr><th>Scheme</th><th>Status</th><th>Update</th></tr></thead>
-          <tbody>
-            {beneficiary.application_statuses.map((status) => (
-              <tr key={status.id ?? status.scheme_id}>
-                <td>{status.scheme_id}</td>
-                <td>{status.status}</td>
-                <td>
-                  {canWrite && status.id ? (
-                    <select
-                      className="denseSelect"
-                      value={status.status}
-                      disabled={saving === status.id}
-                      onChange={(event) => changeStatus(status.id as string, event.target.value)}
-                      aria-label={`Update ${status.scheme_id} application status`}
-                    >
-                      {statusOptions.map((option) => <option key={option} value={option}>{option.replaceAll("_", " ")}</option>)}
-                    </select>
-                  ) : "-"}
-                </td>
-              </tr>
-            ))}
-            {!beneficiary.application_statuses.length ? <tr><td colSpan={3}>No application status records.</td></tr> : null}
-          </tbody>
-        </table>
+        <div className="tableContainer">
+          <table className="denseTable">
+            <thead><tr><th>Scheme</th><th>Status</th><th>Update</th></tr></thead>
+            <tbody>
+              {beneficiary.application_statuses.map((status) => (
+                <tr key={status.id ?? status.scheme_id}>
+                  <td>{status.scheme_id}</td>
+                  <td>{status.status}</td>
+                  <td>
+                    {canWrite && status.id ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <select
+                          className="denseSelect"
+                          value={status.status}
+                          disabled={saving === status.id}
+                          onChange={(event) => changeStatus(status.id as string, event.target.value)}
+                          aria-label={`Update ${status.scheme_id} application status`}
+                        >
+                          {statusOptions.map((option) => <option key={option} value={option}>{option.replaceAll("_", " ")}</option>)}
+                        </select>
+                        {saving === status.id && <span className="spinner" />}
+                      </div>
+                    ) : "-"}
+                  </td>
+                </tr>
+              ))}
+              {!beneficiary.application_statuses.length ? <tr><td colSpan={3}>No application status records.</td></tr> : null}
+            </tbody>
+          </table>
+        </div>
       </section>
 
       <section className="detailGrid">
@@ -234,7 +239,9 @@ export function BeneficiaryDetailClient({ beneficiaryId }: { beneficiaryId: stri
             <form className="stackedForm" onSubmit={submitNote}>
               <label htmlFor="beneficiary-note">Add note</label>
               <textarea id="beneficiary-note" value={note} onChange={(event) => setNote(event.target.value)} maxLength={5000} required />
-              <button className="primaryButton" type="submit" disabled={saving === "note"}>{saving === "note" ? "Saving..." : "Add note"}</button>
+              <button className="primaryButton" type="submit" disabled={saving === "note"}>
+                {saving === "note" ? <><span className="spinner" /> Saving...</> : "Add note"}
+              </button>
             </form>
           ) : null}
           <div className="activityList">
@@ -251,7 +258,9 @@ export function BeneficiaryDetailClient({ beneficiaryId }: { beneficiaryId: stri
               <input id="followup-due-date" name="due_date" type="date" required />
               <label htmlFor="followup-reason">Reason</label>
               <input id="followup-reason" name="reason" maxLength={500} />
-              <button className="primaryButton" type="submit" disabled={saving === "followup"}>{saving === "followup" ? "Saving..." : "Add follow-up"}</button>
+              <button className="primaryButton" type="submit" disabled={saving === "followup"}>
+                {saving === "followup" ? <><span className="spinner" /> Saving...</> : "Add follow-up"}
+              </button>
             </form>
           ) : null}
           <div className="activityList">
@@ -270,34 +279,40 @@ export function BeneficiaryDetailClient({ beneficiaryId }: { beneficiaryId: stri
                 <input type="checkbox" checked={assignMatchedSchemes} onChange={(event) => setAssignMatchedSchemes(event.target.checked)} />
                 <span>Assign matched schemes</span>
               </label>
-              <button className="primaryButton" type="submit" disabled={saving === "eligibility"}>{saving === "eligibility" ? "Running..." : "Run eligibility"}</button>
+              <button className="primaryButton" type="submit" disabled={saving === "eligibility"}>
+                {saving === "eligibility" ? <><span className="spinner" /> Running...</> : "Run eligibility"}
+              </button>
             </form>
           ) : <p>View-only access.</p>}
           <h3>Assigned schemes</h3>
-          <table className="denseTable">
-            <thead><tr><th>Scheme</th><th>Source</th></tr></thead>
-            <tbody>
-              {beneficiary.assigned_schemes.map((item) => <tr key={item.id}><td>{item.scheme_id}</td><td>{item.assignment_source}</td></tr>)}
-              {!beneficiary.assigned_schemes.length ? <tr><td colSpan={2}>No assigned schemes.</td></tr> : null}
-            </tbody>
-          </table>
+          <div className="tableContainer">
+            <table className="denseTable">
+              <thead><tr><th>Scheme</th><th>Source</th></tr></thead>
+              <tbody>
+                {beneficiary.assigned_schemes.map((item) => <tr key={item.id}><td>{item.scheme_id}</td><td>{item.assignment_source}</td></tr>)}
+                {!beneficiary.assigned_schemes.length ? <tr><td colSpan={2}>No assigned schemes.</td></tr> : null}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div className="dashboardPanel">
           <div className="panelTitle"><FileCheck2 size={18} aria-hidden="true" /><h2>Document checklist</h2></div>
-          <table className="denseTable">
-            <thead><tr><th>Document</th><th>Status</th><th>Metadata</th></tr></thead>
-            <tbody>
-              {beneficiary.document_checklist.map((item) => (
-                <tr key={item.id}>
-                  <td>{item.document_name}</td>
-                  <td>{item.status}</td>
-                  <td>{item.metadata ? formatValue(item.metadata) : "-"}</td>
-                </tr>
-              ))}
-              {!beneficiary.document_checklist.length ? <tr><td colSpan={3}>No document review metadata.</td></tr> : null}
-            </tbody>
-          </table>
+          <div className="tableContainer">
+            <table className="denseTable">
+              <thead><tr><th>Document</th><th>Status</th><th>Metadata</th></tr></thead>
+              <tbody>
+                {beneficiary.document_checklist.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.document_name}</td>
+                    <td>{item.status}</td>
+                    <td>{item.metadata ? formatValue(item.metadata) : "-"}</td>
+                  </tr>
+                ))}
+                {!beneficiary.document_checklist.length ? <tr><td colSpan={3}>No document review metadata.</td></tr> : null}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
     </section>

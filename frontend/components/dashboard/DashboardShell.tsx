@@ -65,9 +65,13 @@ export function DashboardShell({ me, children }: { me?: DashboardMe | null; chil
 
   if (!actor) {
     return (
-      <main className="dashboardMain" role="status">
-        Loading dashboard...
-      </main>
+      <div className="dashboardShell">
+        <aside className="dashboardNav skeleton" aria-hidden="true" style={{ width: 248, minHeight: '100vh', borderRight: '1px solid #d7dde8' }}></aside>
+        <main className="dashboardMain" role="status" aria-label="Loading dashboard">
+          <div className="skeleton" style={{ width: 200, height: 32, marginBottom: 24 }}></div>
+          <div className="skeleton" style={{ width: '100%', height: 400, borderRadius: 8 }}></div>
+        </main>
+      </div>
     );
   }
 
@@ -97,7 +101,7 @@ export function DashboardShell({ me, children }: { me?: DashboardMe | null; chil
           <span>Cookie session only</span>
         </div>
         <button className="dashboardLogout" type="button" onClick={logout} disabled={loggingOut}>
-          <LogOut size={16} aria-hidden="true" />
+          {loggingOut ? <span className="spinner" aria-hidden="true" /> : <LogOut size={16} aria-hidden="true" />}
           <span>{loggingOut ? "Signing out..." : "Sign out"}</span>
         </button>
       </aside>

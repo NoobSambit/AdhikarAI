@@ -272,9 +272,9 @@ export default function HomePage() {
             <VoiceStatus status={status} progress={progress} fallbackVisible={fallbackVisible} />
           </div>
           <form className="typeFallback" onSubmit={submitTyped}>
-            <textarea aria-label="Type your problem" value={typed} onChange={(event) => setTyped(event.target.value)} placeholder="Type here if speaking does not work" rows={2} />
+            <textarea aria-label="Type your problem" value={typed} onChange={(event) => setTyped(event.target.value)} placeholder="Type here if speaking does not work" rows={2} disabled={busy} />
             <button type="submit" aria-label="Send typed message" disabled={busy || !typed.trim()}>
-              <Keyboard aria-hidden="true" size={20} />
+              {busy ? <span className="spinner" aria-hidden="true" /> : <Keyboard aria-hidden="true" size={20} />}
             </button>
           </form>
           <div className="turnList" aria-live="polite">
@@ -346,9 +346,12 @@ export default function HomePage() {
 function SchemeSection(props: {
   title: string;
   schemes: SchemeCardView[];
-  onBookmark: (scheme: SchemeCardView) => void;
-  onChecklist: (scheme: SchemeCardView, documentName: string) => void;
+  onBookmark: (scheme: SchemeCardView) => Promise<void>;
+  onChecklist: (scheme: SchemeCardView, documentName: string) => Promise<void>;
 }) {
+  const [savingBookmark, setSavingBookmark] = useState<string>("");
+  const [savingChecklist, setSavingChecklist] = useState<string>("");
+
   if (!props.schemes.length) return null;
   return (
     <section>
@@ -359,8 +362,12 @@ function SchemeSection(props: {
           <article className={`schemeCard ${scheme.eligibility_status}`} key={scheme.scheme_id}>
             <div className="schemeTitleRow">
               <h3>{scheme.name}</h3>
-              <button className="iconButton" type="button" onClick={() => props.onBookmark(scheme)} aria-label={`Save ${scheme.name}`}>
-                <Bookmark aria-hidden="true" size={19} fill={scheme.saved ? "currentColor" : "none"} />
+              <button className="iconButton" type="button" disabled={savingBookmark === scheme.scheme_id} onClick={async () => {
+                setSavingBookmark(scheme.scheme_id);
+                await props.onBookmark(scheme);
+                setSavingBookmark("");
+              }} aria-label={`Save ${scheme.name}`}>
+                {savingBookmark === scheme.scheme_id ? <span className="spinner" /> : <Bookmark aria-hidden="true" size={19} fill={scheme.saved ? "currentColor" : "none"} />}
               </button>
             </div>
             <p>{scheme.plain_language_benefit}</p>
@@ -368,13 +375,20 @@ function SchemeSection(props: {
             <span className="statusBadge">{scheme.eligibility_status.replace("_", " ")}</span>
             {scheme.failed_criterion ? <p className="nearMissText">{scheme.failed_criterion}. {scheme.how_to_qualify}</p> : null}
             <div className="checklist">
-              {scheme.documents.map((doc) => (
-                <label key={doc.document_name} className="checkItem">
-                  <input type="checkbox" checked={doc.status === "gathered" || doc.status === "verified"} onChange={() => props.onChecklist(scheme, doc.document_name)} />
-                  <span>{doc.document_name}</span>
-                  {doc.accepted_substitutes.length ? <small>Substitute available</small> : null}
-                </label>
-              ))}
+              {scheme.documents.map((doc) => {
+                const isToggling = savingChecklist === `${scheme.scheme_id}:${doc.document_name}`;
+                return (
+                  <label key={doc.document_name} className={`checkItem ${isToggling ? "is-loading" : ""}`}>
+                    <input type="checkbox" disabled={isToggling} checked={doc.status === "gathered" || doc.status === "verified"} onChange={async () => {
+                      setSavingChecklist(`${scheme.scheme_id}:${doc.document_name}`);
+                      await props.onChecklist(scheme, doc.document_name);
+                      setSavingChecklist("");
+                    }} />
+                    <span>{doc.document_name} {isToggling && <span className="spinner" style={{marginLeft: 4, width: '0.8em', height: '0.8em'}} />}</span>
+                    {doc.accepted_substitutes.length ? <small>Substitute available</small> : null}
+                  </label>
+                );
+              })}
             </div>
             <details>
               <summary>Application steps</summary>

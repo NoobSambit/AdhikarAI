@@ -9,6 +9,7 @@ export default function DashboardHome() {
   const [items, setItems] = useState<DashboardBeneficiary[]>([]);
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
@@ -19,6 +20,8 @@ export default function DashboardHome() {
         setItems(response.items);
       } catch {
         setError("Dashboard session required.");
+      } finally {
+        setLoading(false);
       }
     }
     load();
@@ -55,31 +58,43 @@ export default function DashboardHome() {
           <CalendarClock size={18} aria-hidden="true" />
           <h2 id="followups-heading">Follow-ups due</h2>
         </div>
-        <table className="denseTable">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Village</th>
-              <th>State</th>
-              <th>Reason</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((item) => (
-              <tr key={item.id}>
-                <td><a href={`/dashboard/beneficiaries/${item.id}`}>{item.name}</a></td>
-                <td>{item.village ?? "-"}</td>
-                <td>{item.state_code}</td>
-                <td>{item.follow_up?.reason ?? "-"}</td>
-                <td>{item.application_statuses[0]?.status ?? "not_started"}</td>
+        <div className="tableContainer">
+          <table className="denseTable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Village</th>
+                <th>State</th>
+                <th>Reason</th>
+                <th>Status</th>
               </tr>
-            ))}
-            {!filtered.length ? (
-              <tr><td colSpan={5}>No follow-ups due today.</td></tr>
-            ) : null}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {loading ? (
+                [1, 2, 3].map((i) => (
+                  <tr key={i} className="skeleton">
+                    <td><div style={{height: 20, width: 120}}></div></td>
+                    <td><div style={{height: 20, width: 80}}></div></td>
+                    <td><div style={{height: 20, width: 40}}></div></td>
+                    <td><div style={{height: 20, width: 150}}></div></td>
+                    <td><div style={{height: 20, width: 90}}></div></td>
+                  </tr>
+                ))
+              ) : filtered.map((item) => (
+                <tr key={item.id}>
+                  <td><a href={`/dashboard/beneficiaries/${item.id}`}>{item.name}</a></td>
+                  <td>{item.village ?? "-"}</td>
+                  <td>{item.state_code}</td>
+                  <td>{item.follow_up?.reason ?? "-"}</td>
+                  <td>{item.application_statuses[0]?.status ?? "not_started"}</td>
+                </tr>
+              ))}
+              {!loading && !filtered.length ? (
+                <tr><td colSpan={5}>No follow-ups due today.</td></tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
       </section>
     </section>
   );
