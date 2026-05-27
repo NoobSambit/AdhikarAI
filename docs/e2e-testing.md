@@ -47,7 +47,7 @@ npx playwright install chromium
 The suite covers the local workflows documented in `docs/local-e2e-report.md`:
 
 - beneficiary PWA typed guest flow, scheme/checklist/status UI smoke, mobile width, and no JWT in localStorage
-- operator dashboard list/create/search plus notes, follow-ups, status update, and unassigned-beneficiary denial
-- NGO admin organisation-scoped listing and cross-organisation denial
+- operator dashboard list/create/search, beneficiary detail route, notes, follow-ups, eligibility trigger, status update, and unassigned-beneficiary detail denial
+- NGO admin organisation-scoped listing, organisation-scoped beneficiary detail access, and cross-organisation detail denial
 - super admin quality, unmatched queries, analytics, and scheme draft preview endpoint smoke
-- keyboard focus and accessible-name smoke checks at mobile, tablet, and desktop widths
+- keyboard focus and accessible-name smoke checks at mobile, tablet, and desktop widths, including the beneficiary detail route

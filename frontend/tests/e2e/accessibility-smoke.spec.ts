@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { assertBackendReady, expectVisibleFocus, useSession } from "./helpers";
+import { assertBackendReady, expectVisibleFocus, readMetadata, useSession } from "./helpers";
 
 test.describe("accessibility and responsive smoke", () => {
   test("PWA controls have accessible names and work at mobile width", async ({ page }) => {
@@ -17,6 +17,7 @@ test.describe("accessibility and responsive smoke", () => {
   test("dashboard navigation and controls work at desktop and tablet widths", async ({ page, context }) => {
     await assertBackendReady();
     await useSession(context, "operator");
+    const metadata = readMetadata();
 
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto("/dashboard");
@@ -30,5 +31,11 @@ test.describe("accessibility and responsive smoke", () => {
     await page.goto("/dashboard/beneficiaries");
     await expect(page.getByPlaceholder("Name, phone, village")).toBeVisible();
     await expect(page.getByRole("button", { name: "Search" })).toBeVisible();
+
+    await page.goto(`/dashboard/beneficiaries/${metadata.assigned_beneficiary_id}`);
+    await expect(page.getByRole("heading", { name: "Local Beneficiary Assigned" })).toBeVisible();
+    await expect(page.getByLabel("Add note")).toBeVisible();
+    await page.keyboard.press("Tab");
+    await expectVisibleFocus(page);
   });
 });

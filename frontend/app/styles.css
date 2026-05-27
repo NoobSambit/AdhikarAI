@@ -639,7 +639,11 @@ html[data-font-size="extra_large"] body {
 .secondaryButton:focus-visible,
 .searchBox input:focus-visible,
 .denseForm input:focus-visible,
-.kanbanCard select:focus-visible {
+.kanbanCard select:focus-visible,
+.denseSelect:focus-visible,
+.stackedForm input:focus-visible,
+.stackedForm textarea:focus-visible,
+.inlineCheck input:focus-visible {
   outline: 3px solid #0f766e;
   outline-offset: 2px;
 }
@@ -779,12 +783,87 @@ html[data-font-size="extra_large"] body {
 }
 
 .denseForm input,
-.kanbanCard select {
+.kanbanCard select,
+.denseSelect,
+.stackedForm input,
+.stackedForm textarea {
   min-height: 44px;
   border: 1px solid #cbd5e1;
   border-radius: 6px;
   padding: 8px;
   font: inherit;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dashboardPanel h2,
+.dashboardPanel h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+}
+
+.keyValueGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.keyValueGrid div {
+  min-width: 0;
+}
+
+.keyValueGrid dt {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.keyValueGrid dd {
+  margin: 2px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.stackedForm {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.stackedForm label {
+  color: #334155;
+  font-weight: 700;
+}
+
+.stackedForm textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.inlineCheck {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.activityList {
+  display: grid;
+  gap: 8px;
+}
+
+.activityList article {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 8px;
+}
+
+.activityList p {
+  margin: 4px 0 0;
 }
 
 .dashboardStatus {
@@ -846,7 +925,8 @@ html[data-font-size="extra_large"] body {
 
   .dashboardNav nav,
   .kanbanGrid,
-  .denseForm {
+  .denseForm,
+  .detailGrid {
     grid-template-columns: 1fr 1fr;
   }
 }
@@ -863,7 +943,9 @@ html[data-font-size="extra_large"] body {
   }
 
   .kanbanGrid,
-  .denseForm {
+  .denseForm,
+  .detailGrid,
+  .keyValueGrid {
     grid-template-columns: 1fr;
   }
 }

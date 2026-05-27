@@ -10,6 +10,8 @@ test.describe("operator dashboard", () => {
   test("loads beneficiary list, creates and searches beneficiary, and verifies operator workflows", async ({ page }) => {
     const metadata = readMetadata();
     const createdName = `Playwright Beneficiary ${Date.now()}`;
+    const noteText = `Playwright operator note ${Date.now()}`;
+    const followupReason = `Playwright follow-up ${Date.now()}`;
     const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
     await page.goto("/dashboard");
@@ -41,39 +43,48 @@ test.describe("operator dashboard", () => {
     const created = (await listResponse.json()).items[0];
     expect(created.name).toBe(createdName);
 
-    const frontendDetail = await page.request.get(`/dashboard/beneficiaries/${created.id}`);
-    if (frontendDetail.status() !== 404) {
-      await page.goto(`/dashboard/beneficiaries/${created.id}`);
-      await expect(page.getByText(createdName)).toBeVisible();
-    }
+    await page.goto(`/dashboard/beneficiaries/${created.id}`);
+    await expect(page.getByRole("heading", { name: createdName })).toBeVisible();
+    await expect(page.getByText("E2E Village")).toBeVisible();
 
-    const noteResponse = await page.request.post(`${API_URL}/dashboard/beneficiaries/${metadata.assigned_beneficiary_id}/notes`, {
-      data: { note: "Playwright operator note" }
-    });
-    expect(noteResponse.ok(), await noteResponse.text()).toBeTruthy();
+    await page.goto(`/dashboard/beneficiaries/${metadata.assigned_beneficiary_id}`);
+    await expect(page.getByRole("heading", { name: "Local Beneficiary Assigned" })).toBeVisible();
+    await expect(page.getByText("+919000000001")).toBeVisible();
+    await expect(page.getByText("Rampur")).toBeVisible();
 
-    const followupResponse = await page.request.post(`${API_URL}/dashboard/beneficiaries/${metadata.assigned_beneficiary_id}/followups`, {
-      data: { due_date: tomorrow, reason: "Playwright follow-up" }
-    });
-    expect(followupResponse.ok(), await followupResponse.text()).toBeTruthy();
+    await page.getByLabel("Add note").fill(noteText);
+    await page.getByRole("button", { name: "Add note" }).click();
+    await expect(page.getByRole("status")).toContainText("Note added.");
+    await expect(page.getByText(noteText)).toBeVisible();
+
+    await page.getByLabel("Due date").fill(tomorrow);
+    await page.getByLabel("Reason").fill(followupReason);
+    await page.getByRole("button", { name: "Add follow-up" }).click();
+    await expect(page.getByRole("status")).toContainText("Follow-up added.");
+    await expect(page.getByText(followupReason)).toBeVisible();
 
     const detailResponse = await page.request.get(`${API_URL}/dashboard/beneficiaries/${metadata.assigned_beneficiary_id}`);
     expect(detailResponse.ok(), await detailResponse.text()).toBeTruthy();
     const detail = await detailResponse.json();
-    expect(detail.notes.some((note: { note: string }) => note.note === "Playwright operator note")).toBeTruthy();
-    expect(detail.followups.some((followup: { reason?: string }) => followup.reason === "Playwright follow-up")).toBeTruthy();
+    expect(detail.notes.some((note: { note: string }) => note.note === noteText)).toBeTruthy();
+    expect(detail.followups.some((followup: { reason?: string }) => followup.reason === followupReason)).toBeTruthy();
 
     const statusId = detail.application_statuses[0]?.id;
     expect(statusId).toBeTruthy();
-    const statusResponse = await page.request.patch(`${API_URL}/dashboard/application-status/${statusId}`, {
-      data: { status: "submitted", notes: "Playwright status update" }
-    });
-    expect(statusResponse.ok(), await statusResponse.text()).toBeTruthy();
+    const statusSelect = page.getByLabel(`Update ${detail.application_statuses[0].scheme_id} application status`);
+    await statusSelect.selectOption("submitted");
+    await expect(page.getByRole("status")).toContainText("Application status updated.");
+
+    await page.getByRole("button", { name: "Run eligibility" }).click();
+    await expect(page.getByRole("status")).toContainText("Eligibility run complete.");
 
     const deniedResponse = await page.request.get(`${API_URL}/dashboard/beneficiaries/${metadata.unassigned_beneficiary_id}`);
     expect(deniedResponse.status()).toBe(403);
     const deniedBody = await deniedResponse.json();
     expect(deniedBody.code ?? deniedBody.error?.code).toBe("BENEFICIARY_NOT_ASSIGNED");
+
+    await page.goto(`/dashboard/beneficiaries/${metadata.unassigned_beneficiary_id}`);
+    await expect(page.getByText("You do not have access to this beneficiary.")).toBeVisible();
 
     await page.goto("/dashboard");
     await page.keyboard.press("Tab");

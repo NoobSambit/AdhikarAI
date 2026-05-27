@@ -18,6 +18,11 @@ test.describe("NGO admin dashboard", () => {
     await expect(page.getByRole("link", { name: "Local Beneficiary Assigned" })).toBeVisible();
     await expect(page.getByText("Other NGO Beneficiary")).toHaveCount(0);
 
+    await page.getByRole("link", { name: "Local Beneficiary Assigned" }).click();
+    await expect(page.getByRole("heading", { name: "Local Beneficiary Assigned" })).toBeVisible();
+    await expect(page.getByText("Rampur")).toBeVisible();
+    await expect(page.getByText(metadata.operator_member_id)).toBeVisible();
+
     const listResponse = await page.request.get(`${API_URL}/dashboard/beneficiaries`);
     expect(listResponse.ok(), await listResponse.text()).toBeTruthy();
     const list = await listResponse.json();
@@ -28,5 +33,8 @@ test.describe("NGO admin dashboard", () => {
     expect(deniedResponse.status()).toBe(403);
     const deniedBody = await deniedResponse.json();
     expect(deniedBody.code ?? deniedBody.error?.code).toBe("ORG_SCOPE_DENIED");
+
+    await page.goto(`/dashboard/beneficiaries/${metadata.other_org_beneficiary_id}`);
+    await expect(page.getByText("You do not have access to this beneficiary.")).toBeVisible();
   });
 });

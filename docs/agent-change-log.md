@@ -1,5 +1,45 @@
 # AdhikarAI Agent Change Log
 
+## 2026-05-23 12:12 IST - Beneficiary Detail Dashboard Route
+
+- Request: Implement the missing Phase 5 frontend beneficiary detail route and make Playwright E2E always cover it.
+- Agent: Codex
+- Changed files:
+  - `backend/app/dashboard/beneficiaries.py`
+  - `backend/app/schemas/phase5.py`
+  - `docs/e2e-testing.md`
+  - `docs/agent-change-log.md`
+  - `frontend/app/dashboard/beneficiaries/[id]/BeneficiaryDetailClient.tsx`
+  - `frontend/app/dashboard/beneficiaries/[id]/page.tsx`
+  - `frontend/app/dashboard/status-board/page.tsx`
+  - `frontend/app/styles.css`
+  - `frontend/lib/api.ts`
+  - `frontend/tests/e2e/accessibility-smoke.spec.ts`
+  - `frontend/tests/e2e/ngo-admin.spec.ts`
+  - `frontend/tests/e2e/operator-dashboard.spec.ts`
+  - `frontend/tests/phase5.static.test.mjs`
+- Cross-layer impact:
+  - Frontend: changed
+  - Backend: changed
+  - Database: not impacted
+  - UI/UX: changed
+  - Tests: changed
+  - Config/Env: not impacted
+  - Docs: changed
+- Schema/migration notes: not needed; no persistence schema changes were made.
+- API contract notes: changed; existing dashboard beneficiary detail responses now include document checklist metadata already stored by the Phase 4 checklist model. Existing fields and routes are preserved.
+- Verification:
+  - `uv run --extra test alembic upgrade head` passed against local PostgreSQL.
+  - `uv run --extra test python -m app.cli.local_e2e --cookie-dir /tmp/adhikarai-local-e2e` passed and refreshed local E2E metadata/cookies.
+  - `uv run --extra test pytest` passed: 55 tests.
+  - `npm run typecheck` passed.
+  - `npm run build` passed; `/dashboard/beneficiaries/[id]` generated as a dynamic route and `/` still built.
+  - `npm run test:phase4 && node tests/phase5.static.test.mjs` passed.
+  - `npm run test:e2e` passed: 6 Playwright tests.
+  - Route smoke passed: Next `/`, `/dashboard/beneficiaries`, and `/dashboard/beneficiaries/c6642406-46f5-4faf-9aec-a94fe864fa32` returned 200; API detail route returned 200 with the operator cookie.
+- Follow-ups:
+  - none
+
 ## 2026-05-23 11:52 IST - Playwright E2E Regression Suite
 
 - Request: Add repeatable Playwright E2E coverage for verified local beneficiary, operator, NGO admin, super admin, accessibility, and route smoke workflows.

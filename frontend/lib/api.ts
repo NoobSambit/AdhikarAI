@@ -100,6 +100,14 @@ export interface DashboardBeneficiary {
   follow_up?: { id?: string; due_date: string; reason?: string; status?: string };
 }
 
+export interface DashboardBeneficiaryDetail extends DashboardBeneficiary {
+  profile: Record<string, unknown>;
+  notes: Array<{ id: string; note: string; created_at?: string }>;
+  followups: Array<{ id: string; due_date: string; reason?: string; status: string }>;
+  assigned_schemes: Array<{ id: string; scheme_id: string; assignment_source: string }>;
+  document_checklist: Array<{ id: string; document_name: string; status: string; metadata?: Record<string, unknown> }>;
+}
+
 export interface DashboardListResponse {
   items: DashboardBeneficiary[];
   total: number;
@@ -280,12 +288,37 @@ export async function createDashboardBeneficiary(payload: Record<string, unknown
   return jsonFetch<DashboardBeneficiary>("/dashboard/beneficiaries", { method: "POST", body: JSON.stringify(payload) });
 }
 
+export async function getDashboardBeneficiary(id: string) {
+  return jsonFetch<DashboardBeneficiaryDetail>(`/dashboard/beneficiaries/${id}`);
+}
+
+export async function addBeneficiaryNote(id: string, note: string) {
+  return jsonFetch<{ id: string; note: string }>(`/dashboard/beneficiaries/${id}/notes`, {
+    method: "POST",
+    body: JSON.stringify({ note })
+  });
+}
+
+export async function addBeneficiaryFollowup(id: string, payload: { due_date: string; reason?: string }) {
+  return jsonFetch<{ id: string; due_date: string; status: string }>(`/dashboard/beneficiaries/${id}/followups`, {
+    method: "POST",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function runBeneficiaryEligibility(id: string, assignMatchedSchemes: boolean) {
+  return jsonFetch<{ matched_schemes: unknown[]; near_miss_schemes: unknown[]; assigned_count: number }>(`/dashboard/beneficiaries/${id}/eligibility`, {
+    method: "POST",
+    body: JSON.stringify({ assign_matched_schemes: assignMatchedSchemes })
+  });
+}
+
 export async function getStatusBoard() {
   return jsonFetch<Record<string, Array<Record<string, string>>>>("/dashboard/status-board");
 }
 
-export async function updateDashboardApplicationStatus(statusId: string, status: string) {
-  return jsonFetch(`/dashboard/application-status/${statusId}`, { method: "PATCH", body: JSON.stringify({ status }) });
+export async function updateDashboardApplicationStatus(statusId: string, status: string, notes?: string) {
+  return jsonFetch(`/dashboard/application-status/${statusId}`, { method: "PATCH", body: JSON.stringify({ status, notes }) });
 }
 
 export async function getSchemeGuide() {

@@ -58,6 +58,7 @@ class BeneficiaryDetailResponse(BeneficiaryResponse):
     notes: list[dict[str, Any]] = Field(default_factory=list)
     followups: list[dict[str, Any]] = Field(default_factory=list)
     assigned_schemes: list[dict[str, Any]] = Field(default_factory=list)
+    document_checklist: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class BeneficiaryListResponse(BaseModel):

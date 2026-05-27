@@ -26,7 +26,7 @@ export default function StatusBoardPage() {
             <h2>{column.replaceAll("_", " ")}</h2>
             {(board[column] ?? []).map((card) => (
               <article className="kanbanCard" key={card.status_id}>
-                <strong>{card.name}</strong>
+                <strong><a href={`/dashboard/beneficiaries/${card.beneficiary_id}`}>{card.name}</a></strong>
                 <span>{card.scheme_id}</span>
                 <select value={card.status} onChange={(event) => move(card.status_id, event.target.value)} aria-label={`Update ${card.name} status`}>
                   <option value="not_started">not started</option>

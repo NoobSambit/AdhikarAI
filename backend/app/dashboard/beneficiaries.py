@@ -192,6 +192,7 @@ async def get_beneficiary_detail(db: AsyncSession, actor: DashboardActor, benefi
         notes=[{"id": str(row.id), "note": row.note, "created_at": row.created_at.isoformat()} for row in notes.all()],
         followups=[{"id": str(row.id), "due_date": row.due_date.isoformat(), "reason": row.reason, "status": row.status} for row in followups.all()],
         assigned_schemes=[{"id": str(row.id), "scheme_id": row.scheme_id, "assignment_source": row.assignment_source} for row in assignments.all()],
+        document_checklist=await document_review_items(db, actor, beneficiary.id),
     )
 
 
