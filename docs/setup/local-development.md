@@ -28,6 +28,67 @@ cd AdhikarAI
 
 ---
 
+## One-Command Local Stack
+
+If PostgreSQL has already been initialized at `/home/noobsambit/.agent-playground/postgres/data` and Redis is installed, start the full local stack from the repository root:
+
+```sh
+npm run dev:local
+```
+
+This command:
+
+- checks or starts PostgreSQL on `localhost:5432`
+- checks or starts Redis on `localhost:6379`
+- runs Alembic migrations
+- refreshes local E2E seed data and dashboard users
+- starts FastAPI at `http://127.0.0.1:8000`
+- starts Next.js at `http://127.0.0.1:3000`
+- prints timestamped logs with service prefixes such as `[postgres]`, `[redis]`, `[migrate]`, `[seed]`, `[backend]`, and `[frontend]`
+
+Useful URLs:
+
+```txt
+PWA:       http://127.0.0.1:3000
+Dashboard: http://127.0.0.1:3000/dashboard/login
+API:       http://127.0.0.1:8000/health
+```
+
+Dashboard local users:
+
+```txt
+operator.local@example.test
+ngo-admin.local@example.test
+super-admin.local@example.test
+```
+
+Access code:
+
+```txt
+local-e2e-login
+```
+
+To skip reseeding on repeated runs:
+
+```sh
+npm run dev:local:no-seed
+```
+
+Supported overrides:
+
+```sh
+POSTGRES_DATA_DIR=/path/to/postgres/data \
+REDIS_URL=redis://localhost:6379/0 \
+FRONTEND_PORT=3000 \
+BACKEND_PORT=8000 \
+DASHBOARD_DEV_LOGIN_CODE=local-e2e-login \
+npm run dev:local
+```
+
+Press `Ctrl+C` to stop the managed backend, frontend, and Redis process started by the command.
+
+---
+
 ## 2. PostgreSQL Setup
 
 If PostgreSQL is already running and you have a superuser role, create the AdhikarAI database user and database:

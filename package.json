@@ -1,0 +1,9 @@
+{
+  "name": "adhikarai",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:local": "node scripts/dev-local.mjs",
+    "dev:local:no-seed": "node scripts/dev-local.mjs --no-seed"
+  }
+}

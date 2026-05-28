@@ -8,6 +8,12 @@ A rural beneficiary speaks their situation in their native language. The AI agen
 
 ## Quick Start
 
+Start the full local stack after PostgreSQL has been initialized:
+
+```sh
+npm run dev:local
+```
+
 → **[Local development setup](docs/setup/local-development.md)**
 
 → **[Environment variables reference](docs/setup/environment-variables.md)**

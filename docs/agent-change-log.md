@@ -1,5 +1,31 @@
 # AdhikarAI Agent Change Log
 
+## 2026-05-27 23:02 IST - One-Command Local Dev Stack
+
+- Request: Add a single npm command to start frontend, backend, PostgreSQL, Redis, migrations, and local seed data with clear service logs.
+- Agent: Codex
+- Changed files:
+  - `package.json`
+  - `scripts/dev-local.mjs`
+  - `README.md`
+  - `docs/setup/local-development.md`
+  - `docs/agent-change-log.md`
+- Cross-layer impact:
+  - Frontend: changed
+  - Backend: changed
+  - Database: changed
+  - UI/UX: not impacted
+  - Tests: not impacted
+  - Config/Env: changed
+  - Docs: changed
+- Schema/migration notes: not needed; the script runs existing migrations but adds no schema change.
+- API contract notes: unchanged; startup orchestration only.
+- Verification:
+  - `node --check scripts/dev-local.mjs` passed.
+  - `timeout 35s npm run dev:local:no-seed` reached ready state for PostgreSQL, Redis, migrations, FastAPI `/health`, and Next.js `/`, then shut down managed backend/frontend/Redis on timeout.
+- Follow-ups:
+  - Run `npm run dev:local` from a normal terminal before manual testing to keep the stack open.
+
 ## 2026-05-27 13:20 IST - Comprehensive Documentation System
 
 - Request: Create a professional, comprehensive documentation system for the entire AdhikarAI application covering engineering, workflows, reference, and diagrams.
