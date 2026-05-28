@@ -52,6 +52,37 @@ def test_profile_extraction_confidence_thresholds():
     assert values["occupation_type"].value == "farmer"
 
 
+def test_structured_profile_extraction_maps_guest_profile_facts():
+    extractor = DeterministicFactExtractor()
+
+    extracted = extractor.extract(
+        "profile_facts: state_code=IN-BR; age=35; gender=female; "
+        "occupation_type=farmer; annual_income=72000; land_holding_acres=1.5; "
+        "has_bank_account=true; has_land_record=false; ration_card_type=bpl"
+    )
+
+    values = {fact.field: fact.value for fact in extracted.facts}
+    assert values["state_code"] == "IN-BR"
+    assert values["age"] == 35
+    assert values["gender"] == "female"
+    assert values["occupation_type"] == "farmer"
+    assert values["annual_income"] == 72000
+    assert values["land_holding_acres"] == 1.5
+    assert values["custom_attributes.has_bank_account"] is True
+    assert values["custom_attributes.has_land_record"] is False
+    assert values["custom_attributes.ration_card_type"] == "bpl"
+    assert values["custom_attributes.is_bpl"] is True
+    assert values["custom_attributes.poor_household"] is True
+
+
+def test_structured_profile_extraction_still_blocks_sensitive_values():
+    extractor = DeterministicFactExtractor()
+
+    extracted = extractor.extract("profile_facts: state_code=IN-BR; bank_account_number=123456789; otp=123456")
+
+    assert extracted.facts == []
+
+
 def test_life_event_marriage():
     event = detect_life_event("I got married last week.")
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, CheckCircle2, Clock3, Home, Keyboard, User, Volume2 } from "lucide-react";
+import { Bookmark, CheckCircle2, ChevronDown, Clock3, Home, Keyboard, Save, Search, User, Volume2 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { AudioMetadata, AudioRecorder } from "@/components/voice/AudioRecorder";
 import { LanguageSelector } from "@/components/voice/LanguageSelector";
@@ -9,17 +9,22 @@ import { VoiceStatus } from "@/components/voice/VoiceStatus";
 import { WaveformVisualizer } from "@/components/voice/WaveformVisualizer";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import {
+  AuthUser,
   createSession,
+  getMe,
   LanguageCode,
   saveScheme,
   SchemeCardView,
+  sendOtp,
   sendMessage,
   sendVoiceTurn,
   updateApplicationStatus,
   updateChecklist,
   updateMe,
+  verifyOtp,
   VoiceTurnResponse
 } from "@/lib/api";
+import { districtsForState, INDIA_STATES, stateLabelFromCode, VILLAGE_SUGGESTIONS_BY_DISTRICT } from "@/lib/indiaLocations";
 import {
   appendConversationTurn,
   cacheSchemes,
@@ -94,6 +99,13 @@ export default function HomePage() {
   const [schemes, setSchemes] = useState<SchemeCardView[]>(SAMPLE_SCHEMES);
   const [lastVoice, setLastVoice] = useState<VoiceTurnResponse | null>(null);
   const [loginPrompt, setLoginPrompt] = useState("");
+  const [profileNotice, setProfileNotice] = useState("");
+  const [profileSavedAt, setProfileSavedAt] = useState("");
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [phoneE164, setPhoneE164] = useState("+91");
+  const [otp, setOtp] = useState("");
+  const [otpChallengeId, setOtpChallengeId] = useState("");
+  const [accountNotice, setAccountNotice] = useState("");
   const [history, setHistory] = useState<Array<{ id: string; updated_at: string; language_code: string; matched_scheme_count: number }>>([]);
 
   useEffect(() => {
@@ -108,12 +120,26 @@ export default function HomePage() {
       if (cached.length) setSchemes(cached);
       setHistory(await getHistory());
       applyAccessibility(guest);
+      try {
+        const me = await getMe();
+        setAuthUser(me.user);
+        setProfileId(me.user.primary_profile_id ?? guest.id);
+      } catch {
+        setAuthUser(null);
+      }
     }
     boot();
   }, []);
 
   const matched = useMemo(() => schemes.filter((scheme) => scheme.eligibility_status === "eligible"), [schemes]);
   const nearMiss = useMemo(() => schemes.filter((scheme) => scheme.eligibility_status === "near_miss"), [schemes]);
+  const profileCompleteness = useMemo(() => computeLocalProfileCompleteness(guestProfile), [guestProfile]);
+  const selectedStateLabel = stateLabelFromCode(guestProfile?.state_code) || guestProfile?.state_code || "";
+  const districtOptions = useMemo(() => districtsForState(guestProfile?.state_code), [guestProfile?.state_code]);
+  const villageOptions = useMemo(() => VILLAGE_SUGGESTIONS_BY_DISTRICT[guestProfile?.district ?? ""] ?? [], [guestProfile?.district]);
+  const stateSelectOptions = useMemo(() => INDIA_STATES.map((state) => ({ value: state.code, label: state.name, meta: state.code })), []);
+  const districtSelectOptions = useMemo(() => districtOptions.map((district) => ({ value: district, label: district })), [districtOptions]);
+  const villageSelectOptions = useMemo(() => villageOptions.map((village) => ({ value: village, label: village })), [villageOptions]);
 
   async function updateLanguage(code: LanguageCode) {
     setLanguageCode(code);
@@ -245,6 +271,84 @@ export default function HomePage() {
     }
   }
 
+  function updateProfileDraft(next: Partial<GuestProfile>) {
+    setProfileNotice("");
+    setProfileSavedAt("");
+    setGuestProfile((current) => (current ? { ...current, ...next } : current));
+  }
+
+  async function saveProfileDetails() {
+    if (!guestProfile) return null;
+    await saveGuestProfile(guestProfile);
+    const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    console.info("Guest profile saved locally", { guest_profile_id: guestProfile.id, saved_at: time });
+    setProfileSavedAt(time);
+    setProfileNotice(`Saved on this phone at ${time}.`);
+    return guestProfile;
+  }
+
+  async function requestOtp() {
+    setAccountNotice("");
+    setBusy(true);
+    try {
+      const response = await sendOtp(DEFAULT_ORG, phoneE164.trim());
+      setOtpChallengeId(response.challenge_id);
+      setAccountNotice(`OTP sent to ${response.masked_phone}.`);
+    } catch {
+      setAccountNotice("Could not send OTP. Check phone number and internet.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function completeOtpLogin() {
+    if (!guestProfile || !otpChallengeId) return;
+    setAccountNotice("");
+    setBusy(true);
+    try {
+      const response = await verifyOtp(DEFAULT_ORG, otpChallengeId, otp.trim(), guestProfile.id, languageCode);
+      setAuthUser(response.user);
+      setProfileId(response.user.primary_profile_id ?? profileId);
+      setAccountNotice(response.migrated_guest_profile ? "Account ready. Your guest profile is linked." : "Signed in.");
+      setOtp("");
+      setOtpChallengeId("");
+    } catch {
+      setAccountNotice("OTP did not work. Try again or request a new OTP.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function findSchemesWithProfile() {
+    if (!guestProfile) return;
+    const stateCode = guestProfile.state_code?.trim().toUpperCase();
+    if (!stateCode) {
+      setProfileNotice("Add state before finding schemes.");
+      return;
+    }
+    const profile = { ...guestProfile, state_code: stateCode };
+    setGuestProfile(profile);
+    setBusy(true);
+    try {
+      await saveGuestProfile(profile);
+      const activeSession = await ensureSession();
+      const message = buildProfileFactsMessage(profile);
+      const response = await sendMessage(DEFAULT_ORG, activeSession, languageCode, message);
+      await applyAgentResponse(activeSession, "My saved details", response.content, response.payload);
+      if (!schemeCardsFromPayload(response.payload).length) {
+        setTab("home");
+      }
+      setProfileNotice("Saved on this phone.");
+      setStatus("Ready. Your details were used to check schemes.");
+    } catch {
+      setProfileNotice("Saved on this phone. Connect internet and tap Find schemes again.");
+      setStatus("Saved on this phone. Connect internet and tap Find schemes again.");
+      await enqueueSync("profile.find_schemes", { session_id: sessionId, profile });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <main className="pwaShell">
       <header className="topBar">
@@ -310,19 +414,149 @@ export default function HomePage() {
       {tab === "profile" ? (
         <section className="profilePane">
           {loginPrompt ? <p className="loginPrompt">{loginPrompt}</p> : null}
-          <p>Guest profile works without login. Phone login saves schemes, checklist, reminders, and documents.</p>
-          <label className="toggleRow">
-            <input type="checkbox" checked={Boolean(guestProfile?.high_contrast_enabled)} onChange={(event) => updateAccessibility({ high_contrast_enabled: event.target.checked })} />
-            High contrast
-          </label>
-          <label className="field">
-            <span>Text size</span>
-            <select value={guestProfile?.font_size ?? "default"} onChange={(event) => updateAccessibility({ font_size: event.target.value as GuestProfile["font_size"] })}>
-              <option value="default">Default</option>
-              <option value="large">Large</option>
-              <option value="extra_large">Extra large</option>
-            </select>
-          </label>
+          <section className="accountPanel" aria-labelledby="account-heading">
+            <div>
+              <h2 id="account-heading">Account</h2>
+              <p>{authUser ? `Signed in as ${maskPhone(authUser.phone_e164)}` : "Guest mode. No account has been created yet."}</p>
+            </div>
+            {!authUser ? (
+              <div className="otpGrid">
+                <label className="profileField">
+                  <span>Phone number</span>
+                  <input type="tel" value={phoneE164} onChange={(event) => setPhoneE164(event.target.value)} placeholder="+91XXXXXXXXXX" autoComplete="tel" />
+                </label>
+                <button type="button" disabled={busy || phoneE164.trim().length < 10} onClick={requestOtp}>Send OTP</button>
+                {otpChallengeId ? (
+                  <>
+                    <label className="profileField">
+                      <span>OTP</span>
+                      <input value={otp} onChange={(event) => setOtp(event.target.value)} inputMode="numeric" autoComplete="one-time-code" />
+                    </label>
+                    <button type="button" disabled={busy || otp.trim().length < 4} onClick={completeOtpLogin}>Verify OTP</button>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
+            {accountNotice ? <p className="profileNotice" aria-live="polite">{accountNotice}</p> : null}
+          </section>
+          <header className="profileHeader">
+            <h1>My details</h1>
+            <p>Save basic facts here. They stay on this phone and help find schemes faster.</p>
+          </header>
+          <div className="profileCompleteness" aria-label="Profile completeness">
+            <div>
+              <span>Profile completeness</span>
+              <strong>{profileCompleteness}%</strong>
+            </div>
+            <progress value={profileCompleteness} max={100}>{profileCompleteness}%</progress>
+          </div>
+          {profileNotice ? <p className="profileNotice" aria-live="polite">{profileNotice}</p> : null}
+          <form className="profileForm" onSubmit={async (event) => {
+            event.preventDefault();
+            await saveProfileDetails();
+          }}>
+            <label className="profileField">
+              <span>Display name</span>
+              <input name="display_name" value={guestProfile?.display_name ?? ""} onChange={(event) => updateProfileDraft({ display_name: event.target.value })} autoComplete="name" />
+            </label>
+            <SearchableSelect
+              label="State"
+              name="state_code"
+              value={selectedStateLabel}
+              placeholder="Select state"
+              options={stateSelectOptions}
+              onSelect={(option) => updateProfileDraft({ state_code: option.value, district: "", village: "" })}
+            />
+            <SearchableSelect
+              label="District"
+              name="district"
+              value={guestProfile?.district ?? ""}
+              placeholder={guestProfile?.state_code ? "Select district" : "Select state first"}
+              options={districtSelectOptions}
+              disabled={!guestProfile?.state_code}
+              onSelect={(option) => updateProfileDraft({ district: option.value, village: "" })}
+            />
+            <SearchableSelect
+              label="Village or place"
+              name="village"
+              value={guestProfile?.village ?? ""}
+              placeholder="Select or type village"
+              options={villageSelectOptions}
+              allowCustom
+              onSelect={(option) => updateProfileDraft({ village: option.value })}
+            />
+            <label className="profileField">
+              <span>Age</span>
+              <input name="age" type="number" min={0} max={120} inputMode="numeric" value={guestProfile?.age ?? ""} onChange={(event) => updateProfileDraft({ age: numberOrUndefined(event.target.value) })} />
+            </label>
+            <label className="profileField">
+              <span>Gender</span>
+              <select name="gender" value={guestProfile?.gender ?? ""} onChange={(event) => updateProfileDraft({ gender: event.target.value as GuestProfile["gender"] })}>
+                <option value="">Select</option>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            <label className="profileField">
+              <span>Occupation</span>
+              <input name="occupation_type" value={guestProfile?.occupation_type ?? ""} onChange={(event) => updateProfileDraft({ occupation_type: event.target.value })} placeholder="farmer" />
+            </label>
+            <label className="profileField">
+              <span>Annual income</span>
+              <input name="annual_income" type="number" min={0} inputMode="numeric" value={guestProfile?.annual_income ?? ""} onChange={(event) => updateProfileDraft({ annual_income: numberOrUndefined(event.target.value) })} />
+            </label>
+            <label className="profileField">
+              <span>Ration card type</span>
+              <select name="ration_card_type" value={guestProfile?.ration_card_type ?? ""} onChange={(event) => updateProfileDraft({ ration_card_type: event.target.value })}>
+                <option value="">Select</option>
+                <option value="bpl">BPL</option>
+                <option value="aay">Antyodaya</option>
+                <option value="apl">APL</option>
+                <option value="none">No ration card</option>
+              </select>
+            </label>
+            <label className="profileField">
+              <span>Land acres</span>
+              <input name="land_holding_acres" type="number" min={0} step="0.01" inputMode="decimal" value={guestProfile?.land_holding_acres ?? ""} onChange={(event) => updateProfileDraft({ land_holding_acres: numberOrUndefined(event.target.value) })} />
+            </label>
+            <label className="toggleRow">
+              <input name="has_land_record" type="checkbox" checked={Boolean(guestProfile?.has_land_record)} onChange={(event) => updateProfileDraft({ has_land_record: event.target.checked })} />
+              Has land record
+            </label>
+            <label className="toggleRow">
+              <input name="has_bank_account" type="checkbox" checked={Boolean(guestProfile?.has_bank_account)} onChange={(event) => updateProfileDraft({ has_bank_account: event.target.checked })} />
+              Has bank account
+            </label>
+            <div className="profileActions">
+              <button className={profileSavedAt ? "saved" : ""} type="submit" disabled={busy}>
+                <Save aria-hidden="true" size={18} />
+                {profileSavedAt ? "Saved" : "Save details"}
+              </button>
+              <button className="primary" type="button" disabled={busy} onClick={findSchemesWithProfile}>
+                <Search aria-hidden="true" size={18} />
+                Find schemes
+              </button>
+            </div>
+            <div className={`saveInlineStatus ${profileSavedAt ? "visible" : ""}`} role="status" aria-live="polite">
+              {profileSavedAt ? `Saved on this phone at ${profileSavedAt}.` : "Changes are not saved yet."}
+            </div>
+          </form>
+          <section className="settingsSection" aria-labelledby="settings-heading">
+            <h2 id="settings-heading">Settings</h2>
+            <label className="toggleRow">
+              <input type="checkbox" checked={Boolean(guestProfile?.high_contrast_enabled)} onChange={(event) => updateAccessibility({ high_contrast_enabled: event.target.checked })} />
+              High contrast
+            </label>
+            <label className="profileField">
+              <span>Text size</span>
+              <select value={guestProfile?.font_size ?? "default"} onChange={(event) => updateAccessibility({ font_size: event.target.value as GuestProfile["font_size"] })}>
+                <option value="default">Default</option>
+                <option value="large">Large</option>
+                <option value="extra_large">Extra large</option>
+              </select>
+            </label>
+          </section>
         </section>
       ) : null}
 
@@ -414,6 +648,97 @@ function SchemeSection(props: {
   );
 }
 
+type SelectOption = { value: string; label: string; meta?: string };
+
+function SearchableSelect(props: {
+  label: string;
+  name: string;
+  value: string;
+  placeholder: string;
+  options: SelectOption[];
+  onSelect: (option: SelectOption) => void;
+  disabled?: boolean;
+  allowCustom?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState(props.value);
+  const listId = `${props.name}-dropdown`;
+
+  useEffect(() => {
+    setQuery(props.value);
+  }, [props.value]);
+
+  const filtered = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return props.options;
+    return props.options.filter((option) => `${option.label} ${option.meta ?? ""}`.toLowerCase().includes(normalized));
+  }, [props.options, query]);
+
+  function choose(option: SelectOption) {
+    props.onSelect(option);
+    setQuery(option.label);
+    setOpen(false);
+  }
+
+  function updateQuery(value: string) {
+    setQuery(value);
+    setOpen(true);
+    const exact = props.options.find((option) => option.label.toLowerCase() === value.trim().toLowerCase() || option.value.toLowerCase() === value.trim().toLowerCase());
+    if (exact) {
+      props.onSelect(exact);
+    } else if (props.allowCustom) {
+      props.onSelect({ value, label: value });
+    }
+  }
+
+  return (
+    <label className="profileField searchableSelect">
+      <span>{props.label}</span>
+      <div className="selectShell">
+        <input
+          aria-controls={listId}
+          aria-expanded={open}
+          aria-haspopup="listbox"
+          autoComplete="off"
+          disabled={props.disabled}
+          name={props.name}
+          onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+          onChange={(event) => updateQuery(event.target.value)}
+          onFocus={() => setOpen(true)}
+          placeholder={props.placeholder}
+          role="combobox"
+          value={query}
+        />
+        <button type="button" disabled={props.disabled} aria-label={`Open ${props.label} list`} onClick={() => setOpen((current) => !current)}>
+          <ChevronDown aria-hidden="true" size={18} />
+        </button>
+        {open && !props.disabled ? (
+          <div className="selectMenu" id={listId} role="listbox">
+            {filtered.map((option) => (
+              <button key={`${option.value}-${option.label}`} type="button" role="option" aria-selected={props.value === option.label || props.value === option.value} onMouseDown={(event) => {
+                event.preventDefault();
+                choose(option);
+              }}>
+                <span>{option.label}</span>
+                {option.meta ? <small>{option.meta}</small> : null}
+              </button>
+            ))}
+            {props.allowCustom && query.trim() ? (
+              <button type="button" role="option" onMouseDown={(event) => {
+                event.preventDefault();
+                choose({ value: query.trim(), label: query.trim() });
+              }}>
+                <span>Use "{query.trim()}"</span>
+              </button>
+            ) : null}
+            {!filtered.length && !props.allowCustom ? <p>No matches</p> : null}
+          </div>
+        ) : null}
+      </div>
+    </label>
+  );
+}
+
 function schemeCardsFromPayload(payload: unknown): SchemeCardView[] {
   const data = payload as { matched_schemes?: Array<Record<string, unknown>>; near_miss_schemes?: Array<Record<string, unknown>> } | null;
   const convert = (item: Record<string, unknown>, status: SchemeCardView["eligibility_status"]) => {
@@ -444,4 +769,57 @@ function schemeCardsFromPayload(payload: unknown): SchemeCardView[] {
 function applyAccessibility(profile: GuestProfile) {
   document.documentElement.dataset.contrast = profile.high_contrast_enabled ? "high" : "normal";
   document.documentElement.dataset.fontSize = profile.font_size;
+}
+
+function numberOrUndefined(value: string) {
+  if (!value.trim()) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function computeLocalProfileCompleteness(profile: GuestProfile | null) {
+  if (!profile) return 0;
+  const fields: Array<keyof GuestProfile> = [
+    "display_name",
+    "state_code",
+    "district",
+    "village",
+    "age",
+    "gender",
+    "occupation_type",
+    "annual_income",
+    "ration_card_type",
+    "land_holding_acres",
+    "has_land_record",
+    "has_bank_account"
+  ];
+  const filled = fields.filter((field) => {
+    const value = profile[field];
+    return value !== undefined && value !== null && value !== "";
+  }).length;
+  return Math.round((filled / fields.length) * 100);
+}
+
+function buildProfileFactsMessage(profile: GuestProfile) {
+  const facts: string[] = [];
+  const add = (key: string, value: string | number | boolean | undefined) => {
+    if (value === undefined || value === "") return;
+    facts.push(`${key}=${String(value).trim()}`);
+  };
+  add("display_name", profile.display_name);
+  add("state_code", profile.state_code?.trim().toUpperCase());
+  add("district", profile.district);
+  add("age", profile.age);
+  add("gender", profile.gender);
+  add("occupation_type", profile.occupation_type);
+  add("annual_income", profile.annual_income);
+  add("ration_card_type", profile.ration_card_type);
+  add("land_holding_acres", profile.land_holding_acres);
+  add("has_land_record", profile.has_land_record);
+  add("has_bank_account", profile.has_bank_account);
+  return `profile_facts: ${facts.join("; ")}`;
+}
+
+function maskPhone(phone: string) {
+  return phone.replace(/(\+\d{2})\d+(\d{4})$/, "$1******$2");
 }

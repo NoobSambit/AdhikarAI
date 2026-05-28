@@ -21,7 +21,16 @@ const config = {
   redisUrl: process.env.REDIS_URL ?? "redis://localhost:6379/0",
   dashboardCode: process.env.DASHBOARD_DEV_LOGIN_CODE ?? "local-e2e-login",
   cookieDir: process.env.E2E_COOKIE_DIR ?? "/tmp/adhikarai-local-e2e",
-  uvCacheDir: process.env.UV_CACHE_DIR ?? "/tmp/uv-cache"
+  uvCacheDir: process.env.UV_CACHE_DIR ?? "/tmp/uv-cache",
+  ollamaBaseUrl: process.env.OLLAMA_BASE_URL ?? "http://localhost:11434",
+  ollamaModel: process.env.OLLAMA_MODEL ?? "qwen2.5:7b",
+  ollamaFallbackModel: process.env.OLLAMA_FALLBACK_MODEL ?? "qwen2.5:7b",
+  whisperBinary: process.env.WHISPER_CPP_BINARY ?? "/home/noobsambit/tools/whisper.cpp/build/bin/whisper-cli",
+  whisperModelPath: process.env.WHISPER_CPP_MODEL_PATH ?? "/home/noobsambit/tools/whisper.cpp/models/ggml-small.bin",
+  translationUrl: process.env.TRANSLATION_SERVICE_URL ?? "http://localhost:8001",
+  localTtsUrl: process.env.LOCAL_TTS_URL ?? "http://localhost:8002",
+  devMockTranslation: process.env.DEV_MOCK_TRANSLATION ?? "true",
+  devMockTts: process.env.DEV_MOCK_TTS ?? "true"
 };
 
 const children = new Map();
@@ -132,6 +141,81 @@ async function ensureRedis() {
   await waitFor("redis", () => commandOk("redis", "redis-cli", ["-u", config.redisUrl, "ping"]));
 }
 
+async function ensureOllama() {
+  log("ollama", `checking ${config.ollamaBaseUrl}`);
+  if (!(await commandOk("ollama", "ollama", ["--version"]))) {
+    throw new Error("Ollama is not installed or not available on PATH.");
+  }
+  if (!(await commandOk("ollama", "curl", ["-fsS", "-o", "/dev/null", `${config.ollamaBaseUrl}/api/tags`]))) {
+    start("ollama", "ollama", ["serve"], {
+      env: {
+        OLLAMA_HOST: new URL(config.ollamaBaseUrl).host
+      }
+    });
+    await waitFor("ollama", () => commandOk("ollama", "curl", ["-fsS", "-o", "/dev/null", `${config.ollamaBaseUrl}/api/tags`]), 60_000);
+  }
+  if (!(await commandOk("ollama", "ollama", ["show", config.ollamaModel]))) {
+    throw new Error(`Ollama model ${config.ollamaModel} is not downloaded. Run: ollama pull ${config.ollamaModel}`);
+  }
+}
+
+function hostPortFromUrl(rawUrl) {
+  const url = new URL(rawUrl);
+  return {
+    host: url.hostname || "127.0.0.1",
+    port: url.port || (url.protocol === "https:" ? "443" : "80")
+  };
+}
+
+function ensureWhisperCpp() {
+  if (!existsSync(config.whisperBinary)) {
+    throw new Error(`Whisper.cpp binary not found: ${config.whisperBinary}`);
+  }
+  if (!existsSync(config.whisperModelPath)) {
+    throw new Error(`Whisper.cpp model not found: ${config.whisperModelPath}`);
+  }
+  log("whisper", `binary: ${config.whisperBinary}`);
+  log("whisper", `model:  ${config.whisperModelPath}`);
+}
+
+async function ensureLocalTranslation() {
+  log("translation", `checking ${config.translationUrl}`);
+  if (await commandOk("translation", "curl", ["-fsS", "-o", "/dev/null", `${config.translationUrl.replace(/\/$/, "")}/health`])) {
+    return;
+  }
+  if (config.devMockTranslation !== "true") {
+    throw new Error(`Translation service is not available at ${config.translationUrl}`);
+  }
+  const { host, port } = hostPortFromUrl(config.translationUrl);
+  log("translation", "starting dev mock; install/run real IndicTrans2 for production-like translations");
+  start("translation-mock", "node", [`${repoRoot}/scripts/dev-translation-mock.mjs`], {
+    env: {
+      DEV_TRANSLATION_HOST: host,
+      DEV_TRANSLATION_PORT: port
+    }
+  });
+  await waitFor("translation", () => commandOk("translation", "curl", ["-fsS", "-o", "/dev/null", `${config.translationUrl.replace(/\/$/, "")}/health`]), 15_000);
+}
+
+async function ensureLocalTts() {
+  log("tts", `checking ${config.localTtsUrl}`);
+  if (await commandOk("tts", "curl", ["-fsS", "-o", "/dev/null", `${config.localTtsUrl.replace(/\/$/, "")}/health`])) {
+    return;
+  }
+  if (config.devMockTts !== "true") {
+    throw new Error(`TTS service is not available at ${config.localTtsUrl}`);
+  }
+  const { host, port } = hostPortFromUrl(config.localTtsUrl);
+  log("tts", "starting dev mock; install/run real IndicTTS for audible speech");
+  start("tts-mock", "node", [`${repoRoot}/scripts/dev-tts-mock.mjs`], {
+    env: {
+      DEV_TTS_HOST: host,
+      DEV_TTS_PORT: port
+    }
+  });
+  await waitFor("tts", () => commandOk("tts", "curl", ["-fsS", "-o", "/dev/null", `${config.localTtsUrl.replace(/\/$/, "")}/health`]), 15_000);
+}
+
 async function migrateAndSeed() {
   const env = {
     UV_CACHE_DIR: config.uvCacheDir,
@@ -182,10 +266,18 @@ async function main() {
   log("local-dev", `frontend: http://${config.frontendHost}:${config.frontendPort}`);
   log("local-dev", `backend:  http://${config.backendHost}:${config.backendPort}`);
   log("local-dev", `redis:    ${config.redisUrl}`);
+  log("local-dev", `ollama:   ${config.ollamaBaseUrl} (${config.ollamaModel})`);
+  log("local-dev", `whisper:  ${config.whisperModelPath}`);
+  log("local-dev", `translate: ${config.translationUrl}`);
+  log("local-dev", `tts:      ${config.localTtsUrl}`);
   log("local-dev", `seed:     ${noSeed ? "disabled" : config.cookieDir}`);
 
   await ensurePostgres();
   await ensureRedis();
+  await ensureOllama();
+  ensureWhisperCpp();
+  await ensureLocalTranslation();
+  await ensureLocalTts();
   await migrateAndSeed();
 
   const backendEnv = {
@@ -197,7 +289,18 @@ async function main() {
     DASHBOARD_AUTH_PROVIDER: "dev",
     DASHBOARD_DEV_LOGIN_ENABLED: "true",
     DASHBOARD_DEV_LOGIN_CODE: config.dashboardCode,
-    LOCAL_E2E_HELPERS_ENABLED: "true"
+    LOCAL_E2E_HELPERS_ENABLED: "true",
+    LLM_PROVIDER: "ollama",
+    OLLAMA_BASE_URL: config.ollamaBaseUrl,
+    OLLAMA_MODEL: config.ollamaModel,
+    OLLAMA_FALLBACK_MODEL: config.ollamaFallbackModel,
+    VOICE_PROVIDER: "local",
+    WHISPER_CPP_BINARY: config.whisperBinary,
+    WHISPER_CPP_MODEL_PATH: config.whisperModelPath,
+    TRANSLATION_PROVIDER: "local_indictrans2",
+    TRANSLATION_SERVICE_URL: config.translationUrl,
+    TTS_PROVIDER: "local_indictts",
+    LOCAL_TTS_URL: config.localTtsUrl
   };
   start("backend", "uv", ["run", "--extra", "test", "uvicorn", "app.main:app", "--host", config.backendHost, "--port", config.backendPort], {
     cwd: backendDir,
@@ -219,7 +322,10 @@ async function main() {
   log("local-dev", `Dashboard: http://${config.frontendHost}:${config.frontendPort}/dashboard/login`);
   log("local-dev", "Dashboard users: operator.local@example.test, ngo-admin.local@example.test, super-admin.local@example.test");
   log("local-dev", `Dashboard access code: ${config.dashboardCode}`);
-  log("local-dev", "Press Ctrl+C to stop backend/frontend/Redis started by this command.");
+  if (config.devMockTranslation === "true" || config.devMockTts === "true") {
+    log("local-dev", "Voice dev note: translation/TTS mocks may be running. They keep the pipeline testable but are not real IndicTrans2/IndicTTS.");
+  }
+  log("local-dev", "Press Ctrl+C to stop backend/frontend/Redis/Ollama/mocks started by this command.");
 }
 
 main().catch((error) => {

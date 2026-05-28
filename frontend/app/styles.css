@@ -362,11 +362,13 @@ pre {
 }
 
 .typeFallback textarea,
+.profilePane input,
 .profilePane select {
   min-height: 48px;
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 10px;
+  width: 100%;
 }
 
 .typeFallback button,
@@ -526,6 +528,230 @@ pre {
 
 .profilePane {
   padding: 8px 2px;
+}
+
+.accountPanel,
+.profileHeader {
+  display: grid;
+  gap: 4px;
+}
+
+.accountPanel {
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.accountPanel h2,
+.profileHeader h1,
+.settingsSection h2 {
+  margin: 0;
+}
+
+.accountPanel p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+
+.otpGrid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.otpGrid .profileField {
+  margin: 0;
+}
+
+.otpGrid button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 6px;
+  background: #334155;
+  color: #fff;
+  padding: 0 14px;
+}
+
+.otpGrid button:disabled {
+  opacity: 0.65;
+}
+
+.profileHeader h1 {
+  font-size: 24px;
+}
+
+.profileHeader p,
+.profileNotice {
+  margin: 0;
+  color: var(--muted);
+}
+
+.profileCompleteness {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.profileCompleteness div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.profileCompleteness progress {
+  width: 100%;
+  height: 12px;
+  accent-color: var(--accent);
+}
+
+.profileForm,
+.settingsSection {
+  display: grid;
+  gap: 12px;
+}
+
+.profileField {
+  display: grid;
+  gap: 6px;
+}
+
+.profileField span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.selectShell {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 48px;
+}
+
+.selectShell input {
+  border-radius: 6px 0 0 6px;
+}
+
+.selectShell > button {
+  min-height: 48px;
+  border: 1px solid var(--border);
+  border-left: 0;
+  border-radius: 0 6px 6px 0;
+  background: #fff;
+  color: var(--text);
+}
+
+.selectMenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 8;
+  max-height: 280px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.14);
+}
+
+.selectMenu button {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 0;
+  border-bottom: 1px solid #eef2f7;
+  background: #fff;
+  color: var(--text);
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.selectMenu button:hover,
+.selectMenu button[aria-selected="true"] {
+  background: #e6f4f1;
+}
+
+.selectMenu small,
+.selectMenu p {
+  color: var(--muted);
+}
+
+.selectMenu p {
+  margin: 0;
+  padding: 12px;
+}
+
+.profileActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.profileActions button {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text);
+}
+
+.profileActions button.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.profileActions button.saved {
+  border-color: #15803d;
+  background: #dcfce7;
+  color: #166534;
+  font-weight: 700;
+}
+
+.profileActions button:disabled {
+  opacity: 0.65;
+}
+
+.saveInlineStatus {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--muted);
+  padding: 8px 10px;
+}
+
+.saveInlineStatus.visible {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #166534;
+  font-weight: 700;
+}
+
+.settingsSection {
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.settingsSection h2 {
+  font-size: 18px;
 }
 
 .loginPrompt {
@@ -1070,4 +1296,3 @@ html[data-font-size="extra_large"] body {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
-

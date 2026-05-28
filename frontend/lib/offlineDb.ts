@@ -6,6 +6,18 @@ import { LanguageCode, SchemeCardView } from "@/lib/api";
 export interface GuestProfile {
   id: string;
   language_code: LanguageCode;
+  display_name?: string;
+  state_code?: string;
+  district?: string;
+  village?: string;
+  age?: number;
+  gender?: "female" | "male" | "other" | "";
+  occupation_type?: string;
+  annual_income?: number;
+  land_holding_acres?: number;
+  ration_card_type?: string;
+  has_land_record?: boolean;
+  has_bank_account?: boolean;
   high_contrast_enabled: boolean;
   font_size: "default" | "large" | "extra_large";
   created_at: string;

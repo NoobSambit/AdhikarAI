@@ -18,7 +18,28 @@ STATE_ALIASES = {
     "orissa": "IN-OR",
     "telangana": "IN-TG",
 }
-SENSITIVE_PATTERNS = [r"\baadhaar\b", r"\baadhar\b", r"\botp\b", r"\bbank account\b"]
+SENSITIVE_PATTERNS = [
+    r"\baadhaar\b",
+    r"\baadhar\b",
+    r"\botp\b",
+    r"\bbank account\b",
+    r"\bbank_account_number\b",
+    r"\baccount_number\b",
+]
+
+STRUCTURED_DIRECT_FIELDS = {
+    "display_name",
+    "state_code",
+    "district",
+    "age",
+    "gender",
+    "occupation_type",
+    "annual_income",
+    "land_holding_acres",
+}
+STRUCTURED_CUSTOM_FIELDS = {"has_bank_account", "has_land_record", "ration_card_type"}
+SENSITIVE_STRUCTURED_KEYS = {"aadhaar", "aadhar", "aadhaar_number", "otp", "bank_account", "bank_account_number", "account_number"}
+BPL_RATION_TYPES = {"bpl", "aay", "antyodaya"}
 
 
 @dataclass(frozen=True)
@@ -39,6 +60,8 @@ class ExtractedFacts:
 class DeterministicFactExtractor:
     def extract(self, message: str) -> ExtractedFacts:
         lower = message.lower()
+        if lower.strip().startswith("profile_facts:"):
+            return self._extract_structured_profile(message)
         if any(re.search(pattern, lower) for pattern in SENSITIVE_PATTERNS):
             return ExtractedFacts()
 
@@ -87,3 +110,76 @@ class DeterministicFactExtractor:
             if relation in lower:
                 return relation
         return "self"
+
+    def _extract_structured_profile(self, message: str) -> ExtractedFacts:
+        payload = message.split(":", 1)[1]
+        parsed: dict[str, str] = {}
+        for part in payload.split(";"):
+            if "=" not in part:
+                continue
+            raw_key, raw_value = part.split("=", 1)
+            key = raw_key.strip().lower()
+            value = raw_value.strip()
+            if not key or not value:
+                continue
+            if key in SENSITIVE_STRUCTURED_KEYS or any(re.search(pattern, value.lower()) for pattern in SENSITIVE_PATTERNS):
+                return ExtractedFacts()
+            parsed[key] = value
+
+        facts: list[ExtractedFact] = []
+        for key, raw_value in parsed.items():
+            if key in STRUCTURED_DIRECT_FIELDS:
+                value = self._coerce_structured_value(key, raw_value)
+                if value is not None:
+                    facts.append(ExtractedFact(key, value, 0.98))
+            elif key in STRUCTURED_CUSTOM_FIELDS:
+                value = self._coerce_structured_value(key, raw_value)
+                if value is not None:
+                    facts.append(ExtractedFact(f"custom_attributes.{key}", value, 0.98))
+                    if key == "ration_card_type":
+                        ration_type = str(value).lower()
+                        is_bpl = ration_type in BPL_RATION_TYPES
+                        facts.append(ExtractedFact("custom_attributes.is_bpl", is_bpl, 0.96))
+                        facts.append(ExtractedFact("custom_attributes.bpl_card", is_bpl, 0.96))
+                        if is_bpl:
+                            facts.append(ExtractedFact("custom_attributes.poor_household", True, 0.96))
+        return ExtractedFacts(facts=facts)
+
+    @staticmethod
+    def _coerce_structured_value(key: str, raw_value: str) -> Any | None:
+        value = raw_value.strip()
+        if key == "state_code":
+            code = value.upper()
+            return code if re.fullmatch(r"IN-[A-Z]{2}", code) else None
+        if key == "age":
+            if not value.isdigit():
+                return None
+            age = int(value)
+            return age if 0 <= age <= 120 else None
+        if key in {"annual_income"}:
+            if not value.isdigit():
+                return None
+            return int(value)
+        if key == "land_holding_acres":
+            try:
+                acres = float(value)
+            except ValueError:
+                return None
+            return acres if acres >= 0 else None
+        if key in {"has_bank_account", "has_land_record"}:
+            lowered = value.lower()
+            if lowered in {"true", "yes", "1"}:
+                return True
+            if lowered in {"false", "no", "0"}:
+                return False
+            return None
+        if key == "gender":
+            lowered = value.lower()
+            return lowered if lowered in {"female", "male", "other"} else None
+        if key == "ration_card_type":
+            lowered = value.lower().replace(" ", "_")
+            return lowered if lowered in {"bpl", "aay", "antyodaya", "apl", "none"} else None
+        if key in {"display_name", "district", "occupation_type"}:
+            cleaned = re.sub(r"\s+", " ", value).strip()
+            return cleaned[:80] if cleaned else None
+        return None

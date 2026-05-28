@@ -1,5 +1,141 @@
 # AdhikarAI Agent Change Log
 
+## 2026-05-28 13:04 IST - Inline Profile Save Feedback
+
+- Request: Make it obvious whether the Profile `Save details` button works after clicking it.
+- Agent: Codex
+- Changed files:
+  - `frontend/app/page.tsx`
+  - `frontend/app/styles.css`
+  - `frontend/tests/phase4.static.test.mjs`
+  - `docs/agent-change-log.md`
+- Cross-layer impact:
+  - Frontend: changed
+  - Backend: not impacted
+  - Database: not impacted
+  - UI/UX: changed
+  - Tests: changed
+  - Config/Env: not impacted
+  - Docs: changed
+- Schema/migration notes: not needed; local save behavior is unchanged.
+- API contract notes: unchanged; this is UI feedback only.
+- Verification:
+  - `cd frontend && node tests/phase4.static.test.mjs` passed.
+  - `cd frontend && npm run typecheck` passed.
+- Follow-ups:
+  - none
+
+## 2026-05-28 12:57 IST - Searchable Location Dropdown UI
+
+- Request: Replace the state/district/village text suggestion UI with standard dropdown menus that open visibly and support search.
+- Agent: Codex
+- Changed files:
+  - `frontend/app/page.tsx`
+  - `frontend/app/styles.css`
+  - `frontend/tests/phase4.static.test.mjs`
+  - `docs/agent-change-log.md`
+- Cross-layer impact:
+  - Frontend: changed
+  - Backend: not impacted
+  - Database: not impacted
+  - UI/UX: changed
+  - Tests: changed
+  - Config/Env: not impacted
+  - Docs: changed
+- Schema/migration notes: not needed; this only changes frontend profile input behavior.
+- API contract notes: unchanged; no route or response shape changed.
+- Verification:
+  - `cd frontend && node tests/phase4.static.test.mjs` passed.
+  - `cd frontend && npm run typecheck` passed.
+- Follow-ups:
+  - Build an LGD-backed backend location search service for exhaustive, current all-India villages and local bodies.
+
+## 2026-05-28 12:49 IST - Profile Account and Location UX Repair
+
+- Request: Make Profile saving obvious, clarify guest versus account state, and add searchable state/district/village location selectors.
+- Agent: Codex
+- Changed files:
+  - `frontend/app/page.tsx`
+  - `frontend/app/styles.css`
+  - `frontend/lib/indiaLocations.ts`
+  - `frontend/tests/phase4.static.test.mjs`
+  - `frontend/tests/e2e/beneficiary-pwa.spec.ts`
+  - `docs/agent-change-log.md`
+- Cross-layer impact:
+  - Frontend: changed
+  - Backend: not impacted
+  - Database: not impacted
+  - UI/UX: changed
+  - Tests: changed
+  - Config/Env: not impacted
+  - Docs: changed
+- Schema/migration notes: not needed; account flow uses existing OTP auth API and location details remain in existing guest profile fields.
+- API contract notes: unchanged; uses existing `/auth/send-otp`, `/auth/verify-otp`, `/me`, and `/agent/message`.
+- Verification:
+  - `cd frontend && node tests/phase4.static.test.mjs` passed.
+  - `cd frontend && npm run typecheck` passed.
+  - `curl -I -L http://127.0.0.1:3000` returned 200.
+  - `cd frontend && npm run test:e2e -- beneficiary-pwa.spec.ts` did not run because Playwright's configured web server exited early before tests started.
+- Follow-ups:
+  - Replace the interim local district/village suggestion list with a generated LGD-derived dataset or backend location search endpoint before claiming exhaustive all-India village coverage.
+
+## 2026-05-28 12:34 IST - Local Voice Stack Startup
+
+- Request: Update `npm run dev:local` and local env so Ollama and Whisper are started/checked automatically, with local translation/TTS available for browser voice testing.
+- Agent: Codex
+- Changed files:
+  - `backend/.env`
+  - `scripts/dev-local.mjs`
+  - `scripts/dev-translation-mock.mjs`
+  - `scripts/dev-tts-mock.mjs`
+- Cross-layer impact:
+  - Frontend: not impacted
+  - Backend: not impacted
+  - Database: not impacted
+  - UI/UX: not impacted
+  - Tests: not impacted
+  - Config/Env: changed
+  - Docs: changed
+- Schema/migration notes: not needed; startup/config change only.
+- API contract notes: unchanged; dev mocks implement the existing local provider HTTP shapes.
+- Verification:
+  - `node --check scripts/dev-local.mjs` passed.
+  - `node --check scripts/dev-translation-mock.mjs` passed.
+  - `node --check scripts/dev-tts-mock.mjs` passed.
+  - `npm run dev:local:no-seed` reached Ollama, Whisper path checks, translation mock, TTS mock, migrations, FastAPI `/health`, and Next.js startup; smoke-run process was then stopped.
+- Follow-ups:
+  - Replace dev translation/TTS mocks with real IndicTrans2 and IndicTTS services for production-like multilingual audio.
+
+## 2026-05-28 12:30 IST - Beneficiary Profile Details Tab
+
+- Request: Build a PRD-aligned beneficiary Profile tab that saves guest details locally and sends saved facts through the existing `/agent/message` flow for recommendations.
+- Agent: Codex
+- Changed files:
+  - `frontend/app/page.tsx`
+  - `frontend/app/styles.css`
+  - `frontend/tests/phase4.static.test.mjs`
+  - `frontend/tests/e2e/beneficiary-pwa.spec.ts`
+  - `backend/app/agent/extraction.py`
+  - `backend/tests/unit/test_phase2_agent_utilities.py`
+  - `docs/agent-change-log.md`
+- Cross-layer impact:
+  - Frontend: changed
+  - Backend: changed
+  - Database: not impacted
+  - UI/UX: changed
+  - Tests: changed
+  - Config/Env: not impacted
+  - Docs: changed
+- Schema/migration notes: not needed; guest profile fields use existing IndexedDB shape and backend persistence uses existing `profiles` columns plus `custom_attributes`.
+- API contract notes: unchanged; the Profile tab uses existing `/agent/sessions` and `/agent/message`.
+- Verification:
+  - `cd frontend && node tests/phase4.static.test.mjs` passed.
+  - `cd frontend && npm run typecheck` passed.
+  - `cd backend && uv --cache-dir /tmp/adhikarai-uv-cache run --extra test pytest tests/unit/test_phase2_agent_utilities.py` passed.
+  - `cd frontend && npm run test:e2e -- beneficiary-pwa.spec.ts` not run because localhost frontend/backend were not running.
+- Follow-ups:
+  - Run the Playwright beneficiary PWA spec with the local stack running.
+
 ## 2026-05-27 23:02 IST - One-Command Local Dev Stack
 
 - Request: Add a single npm command to start frontend, backend, PostgreSQL, Redis, migrations, and local seed data with clear service logs.
