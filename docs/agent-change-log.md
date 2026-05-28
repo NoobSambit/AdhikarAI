@@ -1,5 +1,63 @@
 # AdhikarAI Agent Change Log
 
+## 2026-05-28 20:30 IST - Phase 1-2 Recommendation Brain Compliance
+
+- Request: Implement the Phase 1-2 recommendation brain PRD compliance plan with real FAISS search, semantic agent candidates, real LangGraph wiring, LLM extraction fallback, confirmation handling, and tests.
+- Agent: Codex
+- Changed files:
+  - `backend/app/agent/extraction.py`
+  - `backend/app/agent/graph.py`
+  - `backend/app/agent/question_selection.py`
+  - `backend/app/agent/state.py`
+  - `backend/app/services/eligibility/matcher.py`
+  - `backend/app/services/schemes.py`
+  - `backend/app/services/search/embeddings.py`
+  - `backend/app/services/search/faiss_index.py`
+  - `backend/app/services/sessions/session_service.py`
+  - `backend/tests/conftest.py`
+  - `backend/tests/integration/test_faiss_search.py`
+  - `backend/tests/integration/test_phase2_agent_routes.py`
+  - `backend/tests/integration/test_profile_match_api.py`
+  - `backend/tests/unit/test_phase2_agent_utilities.py`
+  - `docs/agent-change-log.md`
+- Cross-layer impact:
+  - Frontend: not impacted
+  - Backend: changed
+  - Database: not impacted
+  - UI/UX: not impacted
+  - Tests: changed
+  - Config/Env: not impacted
+  - Docs: changed
+- Schema/migration notes: not needed; existing FAISS metadata, scheme embedding, profile snapshot, and agent state fields were sufficient.
+- API contract notes: unchanged for public request/response models; `/agent/message` payload now includes optional candidate and pending confirmation metadata.
+- Verification:
+  - `cd backend && uv run --extra test pytest tests/unit/test_phase2_agent_utilities.py tests/integration/test_faiss_search.py tests/integration/test_profile_match_api.py tests/integration/test_phase2_agent_routes.py` passed: 21 tests.
+  - `cd backend && uv run --extra test pytest` passed: 88 tests.
+- Follow-ups:
+  - none
+
+## 2026-05-28 20:05 IST - Phase 1-2 Recommendation Audit
+
+- Request: Perform a PRD compliance audit only for the Phase 1 and Phase 2 core recommendation flow and write the report to `docs/audits/phase-1-2-core-recommendation-prd-audit.md`.
+- Agent: Codex
+- Changed files:
+  - `docs/audits/phase-1-2-core-recommendation-prd-audit.md`
+  - `docs/agent-change-log.md`
+- Cross-layer impact:
+  - Frontend: not impacted
+  - Backend: not impacted
+  - Database: not impacted
+  - UI/UX: not impacted
+  - Tests: not impacted
+  - Config/Env: not impacted
+  - Docs: changed
+- Schema/migration notes: not needed; audit documentation only.
+- API contract notes: unchanged; no source or API behavior changed.
+- Verification:
+  - `cd backend && uv run --extra test pytest tests/unit/test_criteria_evaluator.py tests/unit/test_near_miss.py tests/unit/test_rule_validation.py tests/unit/test_phase2_agent_utilities.py tests/unit/test_phase2_session_store.py tests/unit/test_phase2_document_check.py tests/unit/test_seed_data.py tests/integration/test_profile_match_api.py tests/integration/test_faiss_search.py tests/integration/test_phase2_agent_routes.py` passed: 24 tests.
+- Follow-ups:
+  - none
+
 ## 2026-05-28 13:04 IST - Inline Profile Save Feedback
 
 - Request: Make it obvious whether the Profile `Save details` button works after clicking it.

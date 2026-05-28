@@ -255,6 +255,29 @@ async def active_scheme_rules(db: AsyncSession, organisation_id: str):
     return output
 
 
+async def active_scheme_rules_for_ids(db: AsyncSession, organisation_id: str | UUID, scheme_ids: list[str]):
+    if not scheme_ids:
+        return []
+    org = await ensure_organisation(db, organisation_id)
+    today = date.today()
+    schemes = await db.scalars(
+        select(Scheme)
+        .where(
+            Scheme.organisation_id == org.id,
+            Scheme.id.in_(scheme_ids),
+            Scheme.is_active.is_(True),
+            Scheme.status == "active",
+            (Scheme.valid_until.is_(None)) | (Scheme.valid_until >= today),
+        )
+        .order_by(Scheme.name)
+    )
+    output = []
+    for scheme in schemes.all():
+        rule = await latest_rule(db, org.id, scheme.id)
+        output.append(SimpleNamespace(scheme=scheme, rule=EligibilityCriteriaModel.model_validate(rule.criteria)))
+    return output
+
+
 def scheme_summary(scheme: Scheme, criteria: EligibilityCriteriaModel) -> SchemeSummaryModel:
     return SchemeSummaryModel(
         id=scheme.id,

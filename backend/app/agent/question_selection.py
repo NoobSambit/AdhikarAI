@@ -15,6 +15,8 @@ QUESTION_TEMPLATES = {
     "marital_status": "Are you married, unmarried, widowed, divorced, or separated?",
     "land_holding_acres": "How much farming land does your family have, in acres?",
     "custom_attributes.is_bpl": "Do you have a BPL card or ration card for a poor household?",
+    "custom_attributes.is_pregnant": "Are you pregnant now?",
+    "custom_attributes.child_order": "Is this your first, second, or later child?",
     "fallback": "Do you want me to show the best schemes I found so far?",
 }
 FIELD_WEIGHT = {

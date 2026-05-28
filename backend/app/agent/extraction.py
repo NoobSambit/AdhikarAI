@@ -2,6 +2,10 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+import httpx
+
+from app.core.config import get_settings
+
 
 STATE_ALIASES = {
     "bihar": "IN-BR",
@@ -37,9 +41,11 @@ STRUCTURED_DIRECT_FIELDS = {
     "annual_income",
     "land_holding_acres",
 }
-STRUCTURED_CUSTOM_FIELDS = {"has_bank_account", "has_land_record", "ration_card_type"}
+STRUCTURED_CUSTOM_FIELDS = {"has_bank_account", "has_land_record", "ration_card_type", "is_pregnant", "child_order"}
 SENSITIVE_STRUCTURED_KEYS = {"aadhaar", "aadhar", "aadhaar_number", "otp", "bank_account", "bank_account_number", "account_number"}
 BPL_RATION_TYPES = {"bpl", "aay", "antyodaya"}
+YES_WORDS = {"yes", "y", "haan", "ha", "correct", "right"}
+NO_WORDS = {"no", "n", "nahin", "nahi", "wrong", "incorrect"}
 
 
 @dataclass(frozen=True)
@@ -166,13 +172,18 @@ class DeterministicFactExtractor:
             except ValueError:
                 return None
             return acres if acres >= 0 else None
-        if key in {"has_bank_account", "has_land_record"}:
+        if key in {"has_bank_account", "has_land_record", "is_pregnant"}:
             lowered = value.lower()
             if lowered in {"true", "yes", "1"}:
                 return True
             if lowered in {"false", "no", "0"}:
                 return False
             return None
+        if key == "child_order":
+            if not value.isdigit():
+                return None
+            order = int(value)
+            return order if 1 <= order <= 20 else None
         if key == "gender":
             lowered = value.lower()
             return lowered if lowered in {"female", "male", "other"} else None
@@ -183,3 +194,142 @@ class DeterministicFactExtractor:
             cleaned = re.sub(r"\s+", " ", value).strip()
             return cleaned[:80] if cleaned else None
         return None
+
+
+def _is_sensitive_field_or_value(field: str, value: Any) -> bool:
+    lowered_field = field.lower()
+    if lowered_field in SENSITIVE_STRUCTURED_KEYS or any(re.search(pattern, lowered_field) for pattern in SENSITIVE_PATTERNS):
+        return True
+    lowered_value = str(value).lower()
+    return any(re.search(pattern, lowered_value) for pattern in SENSITIVE_PATTERNS)
+
+
+def _fact_from_payload(payload: dict[str, Any]) -> ExtractedFact | None:
+    field_name = str(payload.get("field", "")).strip()
+    if not field_name:
+        return None
+    value = payload.get("value")
+    if _is_sensitive_field_or_value(field_name, value):
+        return None
+    try:
+        confidence = float(payload.get("confidence", 0))
+    except (TypeError, ValueError):
+        confidence = 0
+    if confidence < 0:
+        confidence = 0
+    if confidence > 1:
+        confidence = 1
+    return ExtractedFact(
+        field=field_name,
+        value=value,
+        confidence=confidence,
+        member_reference=str(payload.get("member_reference") or "self"),
+    )
+
+
+def _facts_from_payload(payload: dict[str, Any]) -> ExtractedFacts:
+    facts = [_fact_from_payload(item) for item in payload.get("facts", []) if isinstance(item, dict)]
+    confirmation = [_fact_from_payload(item) for item in payload.get("needs_confirmation", []) if isinstance(item, dict)]
+    return ExtractedFacts(
+        facts=[fact for fact in facts if fact is not None],
+        active_member_reference=str(payload.get("active_member_reference") or "self"),
+        needs_confirmation=[fact for fact in confirmation if fact is not None],
+    )
+
+
+async def extract_facts(message: str) -> ExtractedFacts:
+    deterministic = DeterministicFactExtractor().extract(message)
+    if message.lower().strip().startswith("profile_facts:"):
+        return deterministic
+    settings = get_settings()
+    if settings.llm_provider not in {"ollama", "groq"}:
+        return deterministic
+    attempts = max(1, settings.agent_json_repair_retries + 1)
+    for attempt in range(attempts):
+        try:
+            payload = await _call_llm_json(message, repair=attempt > 0)
+            extracted = _facts_from_payload(payload)
+            if extracted.facts or extracted.needs_confirmation:
+                return extracted
+        except Exception:
+            continue
+    return deterministic
+
+
+async def _call_llm_json(message: str, repair: bool = False) -> dict[str, Any]:
+    settings = get_settings()
+    system = (
+        "Extract welfare eligibility profile facts from the user message. Return strict JSON only with keys "
+        "facts, active_member_reference, and needs_confirmation. Facts need field, value, confidence, and optional member_reference. "
+        "Never include Aadhaar, OTP, bank account, or raw sensitive identifiers."
+    )
+    if repair:
+        system = "Repair the previous extraction into strict JSON only. " + system
+    body = {
+        "messages": [{"role": "system", "content": system}, {"role": "user", "content": message}],
+        "temperature": settings.agent_temperature,
+        "max_tokens": settings.agent_max_tokens,
+    }
+    timeout = httpx.Timeout(settings.agent_timeout_seconds)
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        if settings.llm_provider == "ollama":
+            response = await client.post(
+                f"{settings.ollama_base_url.rstrip('/')}/api/chat",
+                json={**body, "model": settings.ollama_model, "stream": False, "format": "json"},
+            )
+            response.raise_for_status()
+            content = response.json().get("message", {}).get("content", "{}")
+        elif settings.llm_provider == "groq" and settings.groq_api_key:
+            response = await client.post(
+                f"{settings.groq_base_url.rstrip('/')}/chat/completions",
+                headers={"Authorization": f"Bearer {settings.groq_api_key}"},
+                json={**body, "model": settings.groq_chat_model, "response_format": {"type": "json_object"}},
+            )
+            response.raise_for_status()
+            content = response.json()["choices"][0]["message"]["content"]
+        else:
+            raise ValueError("unsupported provider")
+    import json
+
+    return json.loads(content)
+
+
+def prepare_pending_confirmation(state, facts: list[ExtractedFact], profile: dict[str, Any]) -> dict[str, Any] | None:
+    if state.pending_confirmation:
+        return state.pending_confirmation
+    for fact in facts:
+        if 0.5 <= fact.confidence < 0.75:
+            pending = {
+                "fact": {
+                    "field": fact.field,
+                    "value": fact.value,
+                    "confidence": fact.confidence,
+                    "member_reference": fact.member_reference,
+                }
+            }
+            state.pending_confirmation = pending
+            return pending
+    return None
+
+
+def merge_confirmed_pending_fact(state, message: str, profile: dict[str, Any]) -> bool | None:
+    if not state.pending_confirmation:
+        return None
+    answer = message.strip().lower()
+    if answer not in YES_WORDS | NO_WORDS:
+        return None
+    fact_payload = state.pending_confirmation.get("fact", {})
+    state.pending_confirmation = None
+    if answer in NO_WORDS:
+        return False
+    fact = ExtractedFact(
+        field=fact_payload["field"],
+        value=fact_payload.get("value"),
+        confidence=1.0,
+        member_reference=fact_payload.get("member_reference", "self"),
+    )
+    if fact.field.startswith("custom_attributes."):
+        profile.setdefault("custom_attributes", {})[fact.field.split(".", 1)[1]] = fact.value
+    else:
+        profile[fact.field] = fact.value
+    return True

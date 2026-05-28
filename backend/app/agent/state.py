@@ -21,3 +21,20 @@ class AdhikarAgentState(TypedDict, total=False):
     language_code: str
     last_match_result: dict[str, Any] | None
     turn_count_since_result: int
+    input_message: Any
+    db: Any
+    output: dict[str, Any]
+    state_model: Any
+    row: Any
+    extracted: Any
+    profile_data: dict[str, Any]
+    organisation_id: Any
+    scheme_rules: list[Any]
+    candidate_scheme_ids: list[str]
+    candidate_search_mode: str
+    match_snapshot: dict[str, Any]
+    content: str
+    output_type: str
+    payload: dict[str, Any]
+    pending_confirmation: dict[str, Any] | None
+    confirmation_result: Any

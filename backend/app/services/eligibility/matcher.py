@@ -10,6 +10,10 @@ from app.services.schemes import active_scheme_rules, scheme_summary
 async def match_profile(request: MatchProfileRequest, db: AsyncSession, request_id: str | None = None) -> MatchProfileResponse:
     request_id = request_id or new_request_id()
     scheme_rules = await active_scheme_rules(db, request.organisation_id)
+    return evaluate_profile_against_rules(request, scheme_rules, request_id)
+
+
+def evaluate_profile_against_rules(request: MatchProfileRequest, scheme_rules: list, request_id: str) -> MatchProfileResponse:
     engine = SchemeEligibilityEngine()
     evaluations = engine.run_evaluation(request.profile, scheme_rules)
     by_id = {item.scheme.id: item for item in scheme_rules}
@@ -58,4 +62,3 @@ async def match_profile(request: MatchProfileRequest, db: AsyncSession, request_
         evaluated_scheme_count=len(evaluations),
         request_id=request_id,
     )
-

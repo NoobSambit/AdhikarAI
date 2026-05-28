@@ -1,5 +1,14 @@
+import pytest
+
+from app.agent.graph import build_agent_graph
 from app.agent.completeness import compute_profile_completeness
-from app.agent.extraction import DeterministicFactExtractor
+from app.agent.extraction import (
+    DeterministicFactExtractor,
+    ExtractedFact,
+    extract_facts,
+    merge_confirmed_pending_fact,
+    prepare_pending_confirmation,
+)
 from app.agent.life_events import detect_life_event
 from app.agent.question_selection import select_next_question
 from app.schemas.agent import AgentStateModel
@@ -98,3 +107,129 @@ def test_life_event_child_birth():
     assert event.event_type == "child_birth"
     assert event.member_patch["relationship_to_primary"] == "child"
     assert event.member_patch["gender"] == "female"
+
+
+@pytest.mark.asyncio
+async def test_llm_extraction_returns_facts_beyond_regex(monkeypatch):
+    async def fake_json(*_args, **_kwargs):
+        return {"facts": [{"field": "custom_attributes.is_pregnant", "value": True, "confidence": 0.91}], "active_member_reference": "self"}
+
+    monkeypatch.setattr("app.agent.extraction._call_llm_json", fake_json)
+
+    extracted = await extract_facts("My delivery is expected soon")
+
+    assert extracted.facts[0].field == "custom_attributes.is_pregnant"
+    assert extracted.facts[0].value is True
+
+
+@pytest.mark.asyncio
+async def test_llm_json_repair_retry_succeeds(monkeypatch):
+    calls = {"count": 0}
+
+    async def fake_json(*_args, **_kwargs):
+        calls["count"] += 1
+        if calls["count"] == 1:
+            raise ValueError("bad json")
+        return {"facts": [{"field": "age", "value": 24, "confidence": 0.88}], "active_member_reference": "self"}
+
+    monkeypatch.setattr("app.agent.extraction._call_llm_json", fake_json)
+
+    extracted = await extract_facts("age twenty four")
+
+    assert calls["count"] == 2
+    assert extracted.facts[0].field == "age"
+
+
+@pytest.mark.asyncio
+async def test_sensitive_llm_fields_are_dropped(monkeypatch):
+    async def fake_json(*_args, **_kwargs):
+        return {
+            "facts": [
+                {"field": "aadhaar_number", "value": "123412341234", "confidence": 0.95},
+                {"field": "age", "value": 29, "confidence": 0.95},
+            ]
+        }
+
+    monkeypatch.setattr("app.agent.extraction._call_llm_json", fake_json)
+
+    extracted = await extract_facts("my aadhaar is 123412341234 and age is 29")
+
+    assert [fact.field for fact in extracted.facts] == ["age"]
+
+
+def test_medium_confidence_fact_waits_for_confirmation():
+    profile = {}
+    state = AgentStateModel(session_id="sess", organisation_id="00000000-0000-0000-0000-000000000001")
+    fact = ExtractedFact("age", 42, 0.61)
+
+    pending = prepare_pending_confirmation(state, [fact], profile)
+
+    assert pending is not None
+    assert state.pending_confirmation["fact"]["field"] == "age"
+    assert "age" not in profile
+
+
+def test_confirmation_yes_merges_and_no_discards():
+    yes_state = AgentStateModel(
+        session_id="sess",
+        organisation_id="00000000-0000-0000-0000-000000000001",
+        pending_confirmation={"fact": {"field": "age", "value": 42, "confidence": 0.61, "member_reference": "self"}},
+    )
+    profile = {}
+
+    assert merge_confirmed_pending_fact(yes_state, "yes", profile) is True
+    assert profile["age"] == 42
+    assert yes_state.pending_confirmation is None
+
+    no_state = AgentStateModel(
+        session_id="sess",
+        organisation_id="00000000-0000-0000-0000-000000000001",
+        pending_confirmation={"fact": {"field": "age", "value": 42, "confidence": 0.61, "member_reference": "self"}},
+    )
+    profile = {}
+
+    assert merge_confirmed_pending_fact(no_state, "no", profile) is False
+    assert profile == {}
+    assert no_state.pending_confirmation is None
+
+
+@pytest.mark.asyncio
+async def test_graph_executes_real_node_order():
+    order = []
+
+    async def node(name):
+        async def _inner(state):
+            order.append(name)
+            return state
+
+        return _inner
+
+    graph = build_agent_graph(
+        {
+            "load_session": await node("load_session"),
+            "extract_profile_facts": await node("extract_profile_facts"),
+            "detect_life_event": await node("detect_life_event"),
+            "process_pending_confirmation": await node("process_pending_confirmation"),
+            "retrieve_semantic_candidates": await node("retrieve_semantic_candidates"),
+            "merge_profile_update": await node("merge_profile_update"),
+            "compute_profile_completeness": await node("compute_profile_completeness"),
+            "run_eligibility_match": await node("run_eligibility_match"),
+            "choose_response": await node("choose_response"),
+            "persist_session": await node("persist_session"),
+        }
+    )
+
+    await graph.ainvoke({"profile_completeness": 0})
+
+    assert order == [
+        "load_session",
+        "extract_profile_facts",
+        "detect_life_event",
+        "process_pending_confirmation",
+        "retrieve_semantic_candidates",
+        "merge_profile_update",
+        "compute_profile_completeness",
+        "run_eligibility_match",
+        "choose_response",
+        "persist_session",
+    ]
